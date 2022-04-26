@@ -594,7 +594,7 @@ $Null = New-ItemProperty -Path $RegistryPath -Name TSManagerVer -Value $TSManage
 $SMSTSMake = (Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer
 $Null = New-ItemProperty -Path $RegistryPath -Name SMSTSMake -Value $SMSTSMake -PropertyType String -Force
 
-$SMSTSModel = (Get-CimInstance -ClassName Win32_ComputerSystem).Mode
+$SMSTSModel = (Get-CimInstance -ClassName Win32_ComputerSystem).Model
 if ($SMSTSMake -eq "LENOVO"){
     $UniqueID = ((Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Name).SubString(0, 4)).Trim()
     $ModelFriendly = (Get-CimInstance -ClassName Win32_ComputerSystemProduct).Version 
