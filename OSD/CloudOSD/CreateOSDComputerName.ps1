@@ -18,7 +18,7 @@ Write-Output "Not in TS"
 
 $Manufacturer = (Get-WmiObject -Class:Win32_ComputerSystem).Manufacturer
 $Model = (Get-WmiObject -Class:Win32_ComputerSystem).Model
-$CompanyName = "Recast"
+$CompanyName = "GARYTOWN"
 
 if ($Manufacturer -match "Lenovo")
     {
@@ -42,8 +42,17 @@ elseif($Manufacturer -match "Dell"){
     elseif($Model-match "OptiPlex"){$Model = $Model.replace("OptiPlex","O")}
     elseif($Model-match "Precision"){$Model = $Model.replace("Precision","P")}
     $Model = $model.replace(" ","-")
-    $Keep = $Model.Split("-") | select -First 2
-    $ComputerName = "$($Manufacturer)-$($Keep[0])-$($Keep[1])"
+    if($Model-match "Tower"){
+        $Model = $Model.replace("Tower","T")
+        $Keep = $Model.Split("-") | select -First 3
+        $ComputerName = "$($Manufacturer)-$($Keep[0])-$($Keep[1])-$($Keep[2])"
+        }
+    else
+        {
+        $Keep = $Model.Split("-") | select -First 2
+        $ComputerName = "$($Manufacturer)-$($Keep[0])-$($Keep[1])"
+        }
+    
     }
 elseif ($Manufacturer -match "Microsoft")
     {
@@ -66,5 +75,5 @@ else {
     }
 Write-Output "====================================================="
 Write-Output "Setting OSDComputerName to $ComputerName"
-$tsenv.value('OSDComputerName') = $ComputerName
+if ($tsenv){$tsenv.value('OSDComputerName') = $ComputerName}
 Write-Output "====================================================="
