@@ -2,6 +2,9 @@
 Script to Update HP TPM Chips
 Process currently does NOT support BIOS with a Password Set
 
+This is a MVP of a script that I threw together after supper, during putting kids to bed, and listening to whatever shows my wife has on in the background, all together about 3 hours"
+
+
 Requires HPCMSL Module installed on Machine
 
 Checks TPM Status, then looks for the available update from HP (if available).  
