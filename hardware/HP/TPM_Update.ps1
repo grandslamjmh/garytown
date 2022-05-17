@@ -1,3 +1,20 @@
+<# GARY BLOK - GARYTOWN.COM
+Script to Update HP TPM Chips
+Process currently does NOT support BIOS with a Password Set
+
+Requires HPCMSL Module installed on Machine
+
+Checks TPM Status, then looks for the available update from HP (if available).  
+Sets BIOS settings to support flashing TPM.. you'll want to continue to run until it no longer finds a TPM Update and sets the BIOS settings back.
+
+VERY LITTLE TESTING DONE.. like 2 computers, since that's all I have at home.
+
+Version: 22.05.16.1
+
+
+#>
+
+
 #This does NOT support BIOS Password.
 
 if ($env:SystemDrive -eq 'X:') {$WindowsPhase = 'WinPE'}
@@ -35,23 +52,7 @@ $BIOSSettingTable= @(
 @{ Stage = 'PostUpdate'; Name = 'SVM CPU Virtualization' ; Value = "Enable"}
 @{ Stage = 'PostUpdate'; Name = 'Intel Software Guard Extensions (SGX)'; Value = "Software control"}
 )
- <#TESTING
-$BIOSSettingTable= @(
-@{ Stage = 'Static'; Name = 'TPM Device'; Value = "Hidden"}
-@{ Stage = 'Static'; Name = 'TPM State'; Value = "Disable"}
-@{ Stage = 'Static'; Name = 'TPM Activation Policy'; Value = "No Prompts"}
-@{ Stage = 'PreUpdate'; Name = 'Virtualization Technology (VTx)'; Value = "Enable"}
-@{ Stage = 'PreUpdate'; Name = 'Virtualization Technology (AMD-V)' ; Value = "Enable"}
-@{ Stage = 'PreUpdate'; Name = 'Trusted Execution Technology (TXT)'; Value = "Enable"}
-@{ Stage = 'PreUpdate'; Name = 'SVM CPU Virtualization' ; Value = "Enable"}
-@{ Stage = 'PreUpdate'; Name = 'Intel Software Guard Extensions (SGX)'; Value = "Disable"}
-@{ Stage = 'PostUpdate'; Name = 'Virtualization Technology (VTx)'; Value = "Enable"}
-@{ Stage = 'PostUpdate'; Name = 'Virtualization Technology (AMD-V)' ; Value = "Enable"}
-@{ Stage = 'PostUpdate'; Name = 'Trusted Execution Technology (TXT)'; Value = "Enable"}
-@{ Stage = 'PostUpdate'; Name = 'SVM CPU Virtualization' ; Value = "Enable"}
-@{ Stage = 'PostUpdate'; Name = 'Intel Software Guard Extensions (SGX)'; Value = "Software control"}
-)
-#>
+
 
 #Detect BIOS Password
 
