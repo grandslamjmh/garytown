@@ -48,7 +48,7 @@ $BIOSSettingTable= @(
 @{ Stage = 'PreUpdate'; Name = 'Virtualization Technology (AMD-V)' ; Value = "Disable"}
 @{ Stage = 'PreUpdate'; Name = 'Trusted Execution Technology (TXT)'; Value = "Disable"}
 @{ Stage = 'PreUpdate'; Name = 'SVM CPU Virtualization' ; Value = "Disable"}
-@{ Stage = 'PreUpdate'; Name = 'Intel Software Guard Extensions (SGX)'; Value = "Disable"}
+#@{ Stage = 'PreUpdate'; Name = 'Intel Software Guard Extensions (SGX)'; Value = "Disable"} #Initial tests show I don't need to disable this
 @{ Stage = 'PostUpdate'; Name = 'Virtualization Technology (VTx)'; Value = "Enable"}
 @{ Stage = 'PostUpdate'; Name = 'Virtualization Technology (AMD-V)' ; Value = "Enable"}
 @{ Stage = 'PostUpdate'; Name = 'Trusted Execution Technology (TXT)'; Value = "Enable"}
