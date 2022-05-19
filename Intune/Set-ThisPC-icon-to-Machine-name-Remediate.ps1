@@ -32,15 +32,14 @@
 $ScriptName = "Set-ThisPC-to-name-of-Machine"
 $ScriptVersion = "21.4.9.1"
 $whoami = (whoami).split("\") | Select-Object -Last 1
-$IntuneFolder = "$env:ProgramData\Intune"
-$LogFilePath = "$IntuneFolder\Logs"
+$CompanyName = "Lightaria"
+$LogFolder = "$env:ProgramData\$CompanyName"
+$LogFilePath = "$LogFolder\Logs"
+if (!(Test-path -Path "$LogFilePath")){New-Item -Path "$LogFilePath" -ItemType Directory -Force | Out-Null}
 $LogFile = "$LogFilePath\$ScriptName.log"
-$Remediate = $false
+$Remediate = $true
 if ($Remediate -eq $true){$ComponentText = "Intune - Remediation"}
 else {$ComponentText = "Intune - Detection"}
-
-if (!(Test-Path -Path $LogFilePath)){$NewFolder = New-Item -Path $LogFilePath -ItemType Directory -Force}
-
 
 #endregion
 ##*=============================================
@@ -225,6 +224,7 @@ if ($Remediate -eq $true -and $Compliance -eq $false)
     $RegistrySystemAccessRuleArgumentList = $identity, $RegistrySystemRights, $type
     $RegistrySystemAccessRule = New-Object -TypeName System.Security.AccessControl.RegistryAccessRule -ArgumentList $RegistrySystemAccessRuleArgumentList
     # Apply new rule
+    $NewAcl = get-acl -Path $RegistryPath
     $NewAcl.SetAccessRule($RegistrySystemAccessRule)
     Set-Acl -Path $RegistryPath -AclObject $NewAcl
 
