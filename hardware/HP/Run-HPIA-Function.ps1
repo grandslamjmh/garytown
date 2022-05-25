@@ -7,6 +7,12 @@ Several Code Snips taken from: https://smsagent.blog/2021/03/30/deploying-hp-bio
 
 HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUserGuide.pdf
 
+Notes about Severity:
+Routine – For new hardware support and feature enhancements.
+Recommended – For minor bug fixes. HP recommends this SoftPaq be installed.
+Critical – For major bug fixes, specific problem resolutions, to enable new OS or Service Pack. Essentially the SoftPaq is required to receive support from HP.
+
+
 #>
 
 [CmdletBinding()]
@@ -22,7 +28,14 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
         $Selection = "All",
         [Parameter(Mandatory=$false)]
         [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
-        $Action = "Install"
+        $Action = "Install",
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
+        $LogFolder = "$env:systemdrive\OSDCloud\Logs",
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
+        $ReportsFolder = "$env:systemdrive\OSDCloud\HPIA"
+
         )
 
 
@@ -39,19 +52,20 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
     ################################
     ## Create Directory Structure ##
     ################################
-    $RootFolder = $env:systemdrive
-    $ParentFolderName = "OSDCloud"
-    $ChildFolderName = "HP_Updates"
-    $ChildFolderName2 = Get-Date –Format "yyyyMMdd-HHmmss"
-    $LogFolder = "$RootFolder\$ParentFolderName\Logs"
+    #$RootFolder = $env:systemdrive
+    #$ParentFolderName = "OSDCloud"
+    #$ChildFolderName = "HP_Updates"
+    $DateTime = Get-Date –Format "yyyyMMdd-HHmmss"
+    $ReportsFolder = "$ReportsFolder\$DateTime"
     $HPIALogFile = "$LogFolder\Run-HPIA.log"
-    $script:WorkingDirectory = "$RootFolder\$ParentFolderName\$ChildFolderName\$ChildFolderName2"
+    #$script:WorkingDirectory = "$RootFolder\$ParentFolderName\$ChildFolderName\$ChildFolderName2"
     $script:TempWorkFolder = "$env:temp\HPIA"
     try 
     {
         [void][System.IO.Directory]::CreateDirectory($WorkingDirectory)
         [void][System.IO.Directory]::CreateDirectory($LogFolder)
         [void][System.IO.Directory]::CreateDirectory($TempWorkFolder)
+        [void][System.IO.Directory]::CreateDirectory($ReportsFolder)
     }
     catch 
     {
@@ -201,11 +215,11 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
     ##############################################
     ## Install Updates with HPIA ##
     ##############################################
-    CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$WorkingDirectory\Report" –Component "Update"
-    Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$WorkingDirectory\Report" -ForegroundColor Green
+    CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
+    Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
     try 
     {
-        $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $WorkingDirectory –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$WorkingDirectory\Report" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
         If ($Process.ExitCode -eq 0)
         {
             CMTraceLog –Message "Analysis complete" –Component "Update"
@@ -264,7 +278,7 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
     
     try 
     {
-        $XMLFile = Get-ChildItem –Path "$WorkingDirectory\Report" –Recurse –Include *.xml –ErrorAction Stop
+        $XMLFile = Get-ChildItem –Path $ReportsFolder –Recurse –Include *.xml –ErrorAction Stop
         If ($XMLFile)
         {
             CMTraceLog –Message "Report located at $($XMLFile.FullName)" –Component "Report"
@@ -377,7 +391,7 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
     ## Overview History of HPIA
     try 
     {
-        $JSONFile = Get-ChildItem –Path "$WorkingDirectory\Report" –Recurse –Include *.JSON –ErrorAction Stop
+        $JSONFile = Get-ChildItem –Path $ReportsFolder –Recurse –Include *.JSON –ErrorAction Stop
         If ($JSONFile)
         {
             Write-Host "Reporting Full HPIA Results" -ForegroundColor Green
@@ -422,8 +436,4 @@ HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUs
     {
     CMTraceLog –Message "NO JSON report." –Component "Report" –Type 1
     }
-                
-    
-
-
 }
