@@ -4,15 +4,12 @@ Function Run-HPIA {
 Update HP Drivers via HPIA - Gary Blok - @gwblok
 Several Code Snips taken from: https://smsagent.blog/2021/03/30/deploying-hp-bios-updates-a-real-world-example/
 
-
 HPIA User Guide: https://ftp.ext.hp.com/pub/caps-softpaq/cmit/whitepapers/HPIAUserGuide.pdf
 
 Notes about Severity:
 Routine – For new hardware support and feature enhancements.
 Recommended – For minor bug fixes. HP recommends this SoftPaq be installed.
 Critical – For major bug fixes, specific problem resolutions, to enable new OS or Service Pack. Essentially the SoftPaq is required to receive support from HP.
-
-
 #>
 
 [CmdletBinding()]
@@ -33,19 +30,12 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         $LogFolder = "$env:systemdrive\OSDCloud\Logs",
         [Parameter(Mandatory=$false)]
         $ReportsFolder = "$env:systemdrive\OSDCloud\HPIA"
-
         )
-
-
-    #####################
-    ## HP UPDATER ##
-    #####################
 
     # Params
     $HPIAWebUrl = "https://ftp.hp.com/pub/caps-softpaq/cmit/HPIA.html" # Static web page of the HP Image Assistant
     $script:FolderPath = "HP_Updates" # the subfolder to put logs into in the storage container
     $ProgressPreference = 'SilentlyContinue' # to speed up web requests
-
 
     ################################
     ## Create Directory Structure ##
@@ -97,16 +87,10 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
 	    $LogMessage = "<![LOG[$Message $ErrorMessage" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
 	    $LogMessage.Replace("`0","") | Out-File -Append -Encoding UTF8 -FilePath $LogFile
     }
-
-
-
     CMTraceLog –Message "#######################" –Component "Preparation"
     CMTraceLog –Message "## Starting HPIA  ##" –Component "Preparation"
     CMTraceLog –Message "#######################" –Component "Preparation"
-
     Write-Host "Starting HPIA to Update HP Drivers" -ForegroundColor Magenta
-
-
     #################################
     ## Disable IE First Run Wizard ##
     #################################
@@ -115,8 +99,6 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     $null = New-Item –Path "HKLM:\SOFTWARE\Policies\Microsoft" –Name "Internet Explorer" –Force
     $null = New-Item –Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer" –Name "Main" –Force
     $null = New-ItemProperty –Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main" –Name "DisableFirstRunCustomize" –PropertyType DWORD –Value 1 –Force
-
-
     ##########################
     ## Get latest HPIA Info ##
     ##########################
@@ -135,9 +117,7 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     $HPIAFileName = $HPIADownloadURL.Split('/')[-1]
     CMTraceLog –Message "SoftPaq number is $HPIASoftPaqNumber" –Component "Download"
     CMTraceLog –Message "Download URL is $HPIADownloadURL" –Component "Download"
-
     Write-Host "Download URL is $HPIADownloadURL" -ForegroundColor Green
-
     ###################
     ## Download HPIA ##
     ###################
@@ -180,8 +160,6 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         CMTraceLog –Message "$HPIAFileName already downloaded, skipping step" –Component "Download"
         Write-Host "$HPIAFileName already downloaded, skipping step" -ForegroundColor Green
         }
-
-
     ##################
     ## Extract HPIA ##
     ##################
@@ -208,8 +186,6 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         Write-Host "Failed to extract the HPIA: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
-
-
     ##############################################
     ## Install Updates with HPIA ##
     ##############################################
@@ -265,15 +241,10 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         throw
     }
 
-
-
     ##############################################
     ## Gathering Addtional Information ##
     ##############################################
-
-    CMTraceLog –Message "Reading xml report" –Component "Report"
-
-    
+    CMTraceLog –Message "Reading xml report" –Component "Report"    
     try 
     {
         $XMLFile = Get-ChildItem –Path $ReportsFolder –Recurse –Include *.xml –ErrorAction Stop
@@ -309,10 +280,8 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                     {
                         CMTraceLog –Message "No BIOS recommendation in the XML report" –Component "Report" –Type 2
                         Write-Host "No BIOS recommendation in XML" -ForegroundColor Gray
-
                     }
                 }
-
                 if ($Category -eq "drivers" -or $Category -eq "All"){
                     CMTraceLog –Message "Checking Driver Recommendations" –Component "Report"
                     Write-Host "Checking Driver Recommendations" -ForegroundColor Green                
@@ -368,7 +337,6 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                         CMTraceLog –Message "No Software recommendation in the XML report" –Component "Report" –Type 2
                         Write-Host "No Software recommendation in XML" -ForegroundColor Gray
                         }
-  
                 }
             }
             catch 
