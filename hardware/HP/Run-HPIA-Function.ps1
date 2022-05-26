@@ -28,12 +28,10 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         $Selection = "All",
         [Parameter(Mandatory=$false)]
         [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
-        $Action = "Install",
+        $Action = "List",
         [Parameter(Mandatory=$false)]
-        [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
         $LogFolder = "$env:systemdrive\OSDCloud\Logs",
         [Parameter(Mandatory=$false)]
-        [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
         $ReportsFolder = "$env:systemdrive\OSDCloud\HPIA"
 
         )
