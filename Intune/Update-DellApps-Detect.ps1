@@ -3,6 +3,8 @@ Gary Blok | @gwblok | Recast Software
 
 Updates  on DELL machines by finding latest version avialble in Dell Command Update XML, Downloading and installing, then triggers a CM Reboot (typically 90 minute countdown)
 
+Used the Dell DCU Legacy Install, not the Universal / UWP app Install.  If you want to modify it for yourself, search for "UWP" and make needed changes.
+
 # Future enhancements
 
 Use Toast to restart instead of CM (For use with InTune)
@@ -282,7 +284,7 @@ if ($Manufacturer -match "Dell")
             $AppNames = $DCUAppsAvailable.name.display.'#cdata-section' | Select-Object -Unique
             #This is using the x86 Windows version, not the UWP app.  You can change this if you like
             $AppDCUVersion = ([Version[]]$Version = ($DCUAppsAvailable | Where-Object {$_.path -match 'command-update' -and $_.SupportedOperatingSystems.OperatingSystem.osArch -match "x64" -and $_.Description.Display.'#cdata-section' -notmatch "UWP"}).vendorVersion) | Sort-Object | Select-Object -Last 1
-            $AppDCU = $DCUAppsAvailable | Where-Object {$_.path -match 'command-update' -and $_.SupportedOperatingSystems.OperatingSystem.osArch -match "x64" -and $_.Description.Display.'#cdata-section' -notmatch "UWP" -and $_.vendorVersion -eq $AppDCUVersion}
+            $AppDCU = $DCUAppsAvailable | Where-Object {$_.path -match 'command-update' -and $_.SupportedOperatingSystems.OperatingSystem.osArch -match "x64" -and $_.Description.Display.'#cdata-section' -notmatch "UWP" -and $_.Description.Display.'#cdata-section' -notmatch "Universal" -and $_.vendorVersion -eq $AppDCUVersion}
             $AppDCMVersion = ([Version[]]$Version = ($DCUAppsAvailable | Where-Object {$_.path -match 'Command-Monitor' -and $_.SupportedOperatingSystems.OperatingSystem.osArch -match "x64"} | Select-Object -Property vendorVersion).vendorVersion) | Sort-Object | Select-Object -last 1
             $AppDCM = $DCUAppsAvailable | Where-Object {$_.path -match 'Command-Monitor' -and $_.SupportedOperatingSystems.OperatingSystem.osArch -match "x64" -and $_.vendorVersion -eq $AppDCMVersion }
             
