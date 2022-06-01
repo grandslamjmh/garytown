@@ -12,6 +12,9 @@ The script needs to know where your Package of the Offline Repo is located
 $DriverPath (Location to CM Package with your Custom Driver pack)
 $HPIAPath (Location to the Package you have HPIA in)
 $Offlinefolder = "$DriverPath\Online" (This is the actual folder in your CMPackage with your HPIA Offline Repo sync'd)
+
+
+!!!!! If it can't find your Offline Repo, falls back to using the internet !!!!
 #>
 
 
