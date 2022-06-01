@@ -1,4 +1,4 @@
-function Test-MeteredConnect {
+function Test-MeteredConnection {
     # InterfaceType = https://docs.microsoft.com/en-us/uwp/api/windows.networking.connectivity.networkadapter.ianainterfacetype?view=winrt-22621
 
     $NetCards = Get-NetAdapter | Where-Object {$_.DriverDescription -notmatch "Virtual" -and $_.DriverDescription -notmatch "Blue" -and $_.DriverDescription -notmatch "Multiplexor"}
