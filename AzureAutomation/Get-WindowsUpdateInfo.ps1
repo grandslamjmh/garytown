@@ -33,7 +33,6 @@ Changes from the orginal script are
 #>
 
 $storageAccount = "garytownstorage"
-#$accesskey = "LabricjTNUo9IHQlH7bVEXxqBWzTz/YPhFjjg+H9ka94h025BqLRuMccVa2Z78vTUtDvexCtGbwk+AStnSXWvw=="
 
 $PartitionKeyName = "GT"
 $accesskey = Get-AutomationVariable -Name StorageAccountAccessKey
