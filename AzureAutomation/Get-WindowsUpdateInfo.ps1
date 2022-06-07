@@ -17,6 +17,7 @@ Changes from the orginal script are
  - Removed section to create JSON and upload to Log analyics (near end)
  - Added Function  InsertReplaceTableEntity (based on https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity) | unsure who created orginally, I found it used in another script at work.
  - Added section that loops through the data and inserts into the Azure Storage Tables
+ - 99% of the script is the orginal work of Trevor, I only made MINOR modifications for where the data goes.  If you find this, please look at Trevor's version, and thank him for this amazing script.
 
  You will need to create 3 storage tables in Azure:
   - OSEditionsTable
