@@ -13,7 +13,7 @@
 .EXTERNALSCRIPTDEPENDENCIES 
 .RELEASENOTES
 Script should be executed in a Command Prompt using the following command
-powershell Invoke-Expression -Command (Invoke-RestMethod -Uri https://raw.githubusercontent.com/OSDeploy/OSD/master/cloudscript/tasksequences/enterprise.ps1)
+powershell Invoke-Expression -Command (Invoke-RestMethod -Uri https://raw.githubusercontent.com/gwblok/garytown/master/Dev/CloudScripts/lightaria.ps1)
 This is abbreviated as
 powershell iex(irm go.osdcloud.com/enterprise)
 #>
@@ -25,9 +25,9 @@ powershell iex(irm go.osdcloud.com/enterprise)
 .NOTES
     Version 22.5.19.1
 .LINK
-    https://raw.githubusercontent.com/OSDeploy/OSD/master/cloudscript/tasksequences/enterprise.ps1
+    https://raw.githubusercontent.com/gwblok/garytown/master/Dev/CloudScripts/lightaria.ps1
 .EXAMPLE
-    powershell iex (irm go.osdcloud.com/enterprise)
+    powershell iex (irm https://raw.githubusercontent.com/gwblok/garytown/master/Dev/CloudScripts/lightaria.ps1)
 #>
 [CmdletBinding()]
 param()
