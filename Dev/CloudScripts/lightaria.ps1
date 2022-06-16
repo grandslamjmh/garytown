@@ -13,7 +13,7 @@
 .EXTERNALSCRIPTDEPENDENCIES 
 .RELEASENOTES
 Script should be executed in a Command Prompt using the following command
-powershell Invoke-Expression -Command (Invoke-RestMethod -Uri go.osdcloud.com/enterprise)
+powershell Invoke-Expression -Command (Invoke-RestMethod -Uri https://raw.githubusercontent.com/OSDeploy/OSD/master/cloudscript/tasksequences/enterprise.ps1)
 This is abbreviated as
 powershell iex(irm go.osdcloud.com/enterprise)
 #>
