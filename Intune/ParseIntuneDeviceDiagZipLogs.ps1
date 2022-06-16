@@ -9,10 +9,14 @@ WindowsUpdateLog.log will be in the Extracted Folder "expanded"
 
 Several modifications because I've been getting different folder structures and files on the different Downloads I've been getting when collecting Logs from Intune.
 
+
+To use, copy the ZIP files to a folder, then update the $DiagZipFilesPath
+I created a folder called Diags in my Downloads directory, and used that, but do whatever tickles your fancy.
+
 #>
 
 #Path Zip Files are downloaded to: 
-"$($env:USERPROFILE)\Downloads\Diags"
+$DiagZipFilesPath = "$($env:USERPROFILE)\Downloads\Diags"
 
 function Extract-DiagnosticLogZip{
 param($DiagnosticArchiveZipPath) 
@@ -82,7 +86,7 @@ return (Join-Path -Path $reformattedArchivePath -ChildPath $leafSummaryString)
 }
 
 #Prompt for Zip File to Extract & Run Commands:
-$ZipFile = Get-ChildItem -Path "$($env:USERPROFILE)\Downloads\Diags" | where-Object {$_.Attributes -eq "Archive"} | Out-GridView -PassThru
+$ZipFile = Get-ChildItem -Path $DiagZipFilesPath | where-Object {$_.Attributes -eq "Archive"} | Out-GridView -PassThru
 
 #Run Extract Function
 $ExtractPath = Extract-DiagnosticLogZip -DiagnosticArchiveZipPath $ZipFile.FullName
