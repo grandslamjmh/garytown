@@ -7,4 +7,5 @@ $Global:MyOSDCloud = [ordered]@{
     }
 
 #Launch OSDCloud
+osdcloud-UpdateModuleFilesManually
 Start-OSDCloudGUIDev
