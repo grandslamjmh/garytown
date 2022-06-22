@@ -126,7 +126,7 @@ if ($WindowsPhase -eq 'OOBE') {
             Write-Host "Setting Name to $HyperVName" -ForegroundColor Gray
                 rename-computer -NewName $HyperVName -Force
                 $AutopilotRegisterCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName'
-                write-host -ForegroundColor Gray '$AutopilotRegisterCommand = Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName'
+                write-host -ForegroundColor Gray '$AutopilotRegisterCommand'" = Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName"
             }
         }
         
