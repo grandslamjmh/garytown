@@ -120,10 +120,20 @@ if ($WindowsPhase -eq 'OOBE') {
     #If not, need to register the device using the Enterprise GroupTag and Assign it
     elseif ($TestAutopilotProfile -eq $false) {
         if (((Get-CimInstance Win32_ComputerSystem).Model -eq "Virtual Machine") -and ((Get-CimInstance Win32_ComputerSystem).Manufacturer -eq "Microsoft Corporation")){
+            write-host "This is a HyperV VM, Attempting to retrieve HyperV VM Name from Host"  -ForegroundColor Cyan
             $HyperVName = Get-HyperVName
-            if ($HyperVName ){$AutopilotRegisterCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName'}
+            if ($HyperVName){
+            Write-Host "Setting Name to $HyperVName" -ForegroundColor Gray
+                rename-computer -NewName $HyperVName -Force
+                $AutopilotRegisterCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName'
+                write-host -ForegroundColor Gray '$AutopilotRegisterCommand = Get-WindowsAutopilotInfo -Online -GroupTag Enterprise -Assign -AssignedComputerName $HyperVName'
+            }
         }
-        else{$AutopilotRegisterCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag HPAEMProd -Assign'}
+        
+        else{
+            $AutopilotRegisterCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag HPAEMProd -Assign'
+            write-host -ForegroundColor Gray '$AutopilotRegisterCommand = Get-WindowsAutopilotInfo -Online -GroupTag HPAEMProd -Assign'
+            }
         $AutopilotRegisterProcess = osdcloud-AutopilotRegisterCommand -Command $AutopilotRegisterCommand;Start-Sleep -Seconds 30
     }
     #Or maybe we just can't figure it out
