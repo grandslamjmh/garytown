@@ -2,7 +2,7 @@
 #Runs Windows Update Troubleshoot and detects issue.  No Remediation
 
 $Compliance = $true
-$RegKey = "HKLM:\SOFTWARE\GARYTOWN"
+$RegKey = "HKLM:\SOFTWARE\GARYTOWN\WU"
 
 
 $WorkingFolder = "$env:TEMP\WUDiag"
@@ -17,23 +17,32 @@ $RootCauses = $Result.ResultReport.Package.Problem.RootCauseInformation.RootCaus
 if ($DiagStatus -ne "0x0"){$Compliance = $false}
 
 Foreach ($RootCause in $RootCauses){
-    #Write-Output "Test: $($RootCause.name)"
-    #Write-Output "Status: $($RootCause.data[1].'#text')"
+    $Test = $RootCause.name
+    $Status = $($RootCause.data[1].'#text')
+    #Write-Output "Test: $Test"
+    #Write-Output "Status: $Status "
     if (!(($($RootCause.data[1].'#text') -eq "Not Checked") -or ($($RootCause.data[1].'#text') -eq "Not Detected"))){
-    $Compliance = $false
+        $Date = Get-Date -Format "MM/dd/yyyy HH:MM:ss"
+        if (!(Test-Path -Path $RegKey)){New-Item -Path $RegKey -Force}
+        New-ItemProperty -Path $RegKey -Name "WUTestFailed" -PropertyType String -Value $Date -Force | out-null
+        New-ItemProperty -Path $RegKey -Name "WU_$($test)" -PropertyType String -Value $Status -Force | out-null
+        $LastFailedTest = $Test
+        $LastFailedStatus = $Status
+        $Compliance = $false
     }
 }
 if ($Compliance -eq $false){
-    $Date = Get-Date -Format "MM/dd/yyyy HH:MM:ss"
-    if (!(Test-Path -Path $RegKey)){New-Item -Path $RegKey -Force}
-    New-ItemProperty -Path $RegKey -Name "WUTestFailed" -PropertyType String -Value $Date -Force
+    #$Date = Get-Date -Format "MM/dd/yyyy HH:MM:ss"
+    #if (!(Test-Path -Path $RegKey)){New-Item -Path $RegKey -Force}
+    #New-ItemProperty -Path $RegKey -Name "WUTestFailed" -PropertyType String -Value $Date -Force | out-null
+    Return "Failed Test: $LastFailedTest "
 }
 else{
     if (Test-Path -Path $RegKey){
         if ((Get-ItemProperty -Path $RegKey -Name "WUTestFailed" -ErrorAction SilentlyContinue) -ne $null){
             Remove-ItemProperty -Path $RegKey -Name "WUTestFailed" -Force
+            Remove-ItemProperty -Path $RegKey -Name "WU_*" -Force
         }
     }
+    Return $Compliance
 }
-
-Return $Compliance
