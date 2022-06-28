@@ -162,11 +162,23 @@ if ($WindowsPhase -eq 'OOBE') {
 if ($WindowsPhase -eq 'Windows') {
 
     #Load OSD and Azure stuff
+
+    Invoke-Expression (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/OSDeploy/OSD/master/cloud/modules/_oobe.psm1')
+    Invoke-Expression (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/OSDeploy/OSD/master/cloud/modules/_anywhere.psm1')
+    Invoke-Expression (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/OSDeploy/OSD/master/cloud/modules/_oobewin.psm1')
+    Invoke-Expression (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/OSDeploy/OSD/master/cloud/modules/autopilot.psm1')
+    Invoke-Expression (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/OSDeploy/OSD/master/cloud/modules/defender.psm1')
+     
     osdcloud-SetExecutionPolicy
     osdcloud-InstallPackageManagement
     osdcloud-InstallModuleKeyVault
     osdcloud-InstallModuleOSD
     osdcloud-InstallModuleAzureAD
+    
+    osdcloud-RemoveAppx -Basic
+    osdcloud-UpdateDefenderStack
+    osdcloud-NetFX
+    
     $null = Stop-Transcript -ErrorAction Ignore
 }
 #endregion
