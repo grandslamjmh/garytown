@@ -60,6 +60,9 @@ elseif ($Manufacturer -match "Microsoft")
         {
         $Random = Get-Random -Maximum 99999
         $ComputerName = "VM-$($CompanyName)-$($Random )"
+        if ($ComputerName.Length -gt 15){
+            $ComputerName = $ComputerName.Substring(0,15)
+            }
         }
     }
 else {
