@@ -26,7 +26,7 @@ if (!(Test-Path -Path $DestinationPath)){
 
 #Build ShortCut Information
 $SourceExe = "$env:windir\system32\control.exe"
-$ArgumentsToSourceExe = "smscfgrc"
+$ArgumentsToSourceExe = 
 $DestinationPath = "$env:Public\Desktop\ConfigMgr Panel.lnk"
 
 if (!(Test-Path -Path $DestinationPath)){
@@ -37,7 +37,7 @@ if (!(Test-Path -Path $DestinationPath)){
         $Shortcut = $WshShell.CreateShortcut($DestinationPath)
         $Shortcut.IconLocation = "C:\Windows\System32\SHELL32.dll, 14"
         $Shortcut.TargetPath = $SourceExe
-        $Shortcut.Arguments = $ArgumentsToSourceExe
+        $Shortcut.Arguments = "smscfgrc"
         $Shortcut.Save()
 
         write-output "Creating ConfigMgr Control Panel Icon on Desktop"
