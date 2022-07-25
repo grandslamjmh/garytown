@@ -1,5 +1,3 @@
-function Get-Win11Readiness {
-
 <#
 Modified for OSD by @gwblok
 
@@ -592,4 +590,4 @@ Storage = $null
 
 
 $outObject | Out-File $env:TEMP\Win11Readiness.txt
-}
+
