@@ -68,7 +68,7 @@ $ODTDownloadURL = ($ODTURLInfo.Links | Where-Object {$_.'data-bi-cN' -match "cli
 $ODTDownloadFile = "$env:temp\ODT.exe"
 $ODTExtractPath = "$env:temp\ODTExtract"
 if (Test-Path $ODTExtractPath){Remove-Item -Path $ODTExtractPath -Force -Recurse}
-$NewFolder = New-Item -Path $OSDExtractPath -ItemType Directory -Force
+$NewFolder = New-Item -Path $ODTExtractPath -ItemType Directory -Force
 
 Invoke-WebRequest -UseBasicParsing -Uri $ODTDownloadURL -OutFile $ODTDownloadFile
 Start-Process -FilePath $ODTDownloadFile -ArgumentList "/extract:$ODTExtractPath /log:$env:temp\ODT.log /quiet" -wait
