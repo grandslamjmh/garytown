@@ -3,7 +3,7 @@
  - Modified for Clean Installs only
  - Modified to use with Intune instead of CM
 
-
+Channels: https://docs.microsoft.com/en-us/mem/configmgr/sum/deploy-use/manage-office-365-proplus-updates
 #>
 [CmdletBinding(DefaultParameterSetName="Office Options")] 
 param (
