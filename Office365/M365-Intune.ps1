@@ -58,7 +58,7 @@ $M365Staging = "$env:TEMP\M365Temp"
 if (!(Test-Path -Path $M365Staging)){New-Item -Path $M365Staging -ItemType Directory -Force | Out-Null}
 $ODTURL = "https://download.microsoft.com/download/2/7/A/27AF1BE6-DD20-4CB4-B154-EBAB8A7D4A7E/officedeploymenttool_15330-20230.exe"
 Invoke-WebRequest -UseBasicParsing -Uri $ODTURL -OutFile "$env:TEMP\ODT.exe"
-Start-Process -FilePath "$env:TEMP\ODT.exe" -ArgumentList "/extract:$($M365Staging) /quiet"
+Start-Process -FilePath "$env:TEMP\ODT.exe" -ArgumentList "/extract:$($M365Staging) /quiet" -wait
 
 #region: CMTraceLog Function formats logging in CMTrace style
         function Write-CMTraceLog {
