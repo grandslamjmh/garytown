@@ -24,20 +24,38 @@ Changes from the orginal script are
   - OSLatestUpdateTable
   - OSUpdateHistoryTable
 
+  Also these (Late additions)
+  - MSWinDefenderDefsInfo
+  - M365VersionSupportTable
+  - M365VersionsHistoryTable
+
  You will need to update:
   - StorageAccount
   - PartitionName 
   - AccessKey (you'll need to create this in Azure Automation, follow Trevor's guide for an example)
 
   As the title says, you will need to run this from Azure Automation, or make additional edits to make it work from a Client.
+
+  Modified Date 2022.08.08 - Added M365 Supported Version (M365VersionSupportTable, M365VersionsHistoryTable)
+  
+  Modified Date 2022.08.16 - Added Defender Def Version (MSWinDefenderDefsInfo)
+   - Also added logic to run only specific tests.  I'm using this to be able to keep the same script consistent in Azure automation, but have some run more frequently.
 #>
 
 $storageAccount = "garytownstorage"
-
 $PartitionKeyName = "GT"
 $accesskey = Get-AutomationVariable -Name StorageAccountAccessKey
 $script:Destination = "$env:TEMP"
 $ProgressPreference = 'SilentlyContinue'
+
+#Run Items:
+$RunEditionsDatatable = $true
+$RunUpdateHistoryTable = $true
+$RunLatestUpdateTable = $true
+$RunVersionBuildTable = $true
+$RunM365SupportedVersionTable = $true
+$RunM365VersionHistoryTable = $true
+$RunMSDefenderDefsTable = $false
 
 
 # Make sure the thread culture is US for consistency of dates. Applies only to the single execution.
@@ -706,6 +724,186 @@ Function Get-WUErrorCodes {
     Return $ErrorCodeTable
 }
 
+# Function to extract M365 Supported Versions from MS docs
+Function New-M365SupportedVersionsTable {
+
+    # Windows release info URLs
+    $URLs = @(
+        "https://docs.microsoft.com/en-us/officeupdates/update-history-microsoft365-apps-by-date"
+        #"https://docs.microsoft.com/en-us/windows/release-health/windows11-release-information"
+    )
+    If ($M365SupportedVersionTable.Columns.Count -eq 0)
+        {
+        $M365SupportedVersionTable.Columns.AddRange(@("Channel","Version","Build","Latest release date","Version availability date","End of service","Category"))
+        }
+
+    
+
+    # Process each Windows release
+    foreach ($URL in $URLs)
+    {
+        Invoke-WebRequest -URI $URL -OutFile $Destination\winreleaseinfo.html -UseBasicParsing
+        $htmlarray = Get-Content $Destination\winreleaseinfo.html -ReadCount 0
+        # get the headers and data cells
+        $headers = $htmlarray | Select-String -SimpleMatch "<h3 " | Where {$_ -notmatch "Related"}
+        $dataCells = $htmlarray | Select-String -SimpleMatch "</td>"
+
+        # process each header
+        $i = 1
+        do {
+            foreach ($header in $headers | Where-Object {$_ -match "Supported"})
+            {
+                $lineNumber = $header.LineNumber
+                $nextHeader = $headers[$i]
+                If ($null -ne $nextHeader)
+                {
+                    $nextHeaderLineNumber = $nextHeader.LineNumber
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber -and $_.LineNumber -lt $nextHeaderLineNumber}
+                }
+                else 
+                {
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber}  
+                }
+
+                # process each cell
+                $totalCells = $cells.Count
+                $t = 0
+                do {
+                    $Row = $M365SupportedVersionTable.NewRow()
+                    "Channel","Version","Build","Latest release date","Version availability date","End of service" | foreach {
+                        $Row["$_"] = "$($cells[$t].ToString().Replace('<code>','').Replace('</code>','').Split('>').Split('<')[2])"
+                        $t ++
+                    }
+                    $Row["Category"] = "$($header.ToString().Split('>').Split('<')[4])"
+                    [void]$M365SupportedVersionTable.Rows.Add($Row)
+                }
+                until ($t -ge ($totalCells -1))
+                $i ++
+            }
+        }
+        until ($i -ge $headers.count)
+
+
+    }
+}
+
+# Function to extract M365 Supported Versions from MS docs
+Function New-M365VersionsHistoryTable {
+
+    # Windows release info URLs
+    $URLs = @(
+        "https://docs.microsoft.com/en-us/officeupdates/current-channel"
+        "https://docs.microsoft.com/en-us/officeupdates/monthly-enterprise-channel"
+        "https://docs.microsoft.com/en-us/officeupdates/semi-annual-enterprise-channel"
+
+        #"https://docs.microsoft.com/en-us/windows/release-health/windows11-release-information"
+    )
+    If ($M365VersionHistoryTable.Columns.Count -eq 0)
+        {
+        $M365VersionHistoryTable.Columns.AddRange(@("Version","Month","Build","Category"))
+        }
+
+    
+
+    # Process each Windows release
+    foreach ($URL in $URLs)
+    {
+        Invoke-WebRequest -URI $URL -OutFile $Destination\winreleaseinfo.html -UseBasicParsing
+        $htmlarray = Get-Content $Destination\winreleaseinfo.html -ReadCount 0
+        # get the headers and data cells
+        $headers = $htmlarray | Select-String -SimpleMatch "<h1 "
+        $Versions = $htmlarray | Select-String -SimpleMatch "<h2 " | Where-Object {$_ -match "Version"}
+        $Builds = $htmlarray | Select-String -SimpleMatch " (Build"
+        foreach ($header in $headers){
+            foreach ($Version in $Versions)#{}
+            {
+                $M365Version = "$($Version.ToString().Split('>').Split('<')[2].Split(':')[0].Trim())"
+                $M365Month = "$($Version.ToString().Split('>').Split('<')[2].Split(':')[1].Trim())"
+                #$Build = $Builds | Where-Object {$_ -match "$M365Version"}
+                $VersionLineNumber = $Version.LineNumber
+                $M365Build = $($($Builds | Where-Object {$_.LineNumber -eq ($VersionLineNumber + 1)}).ToString().Split('>').Split('<')[4].Split(' ')[3].replace(')',''))
+
+                $Row = $M365VersionHistoryTable.NewRow()
+                $Row["Version"] = $M365Version
+                $Row["Month"] = $M365Month
+                $Row["Build"] = $M365Build
+                $Row["Category"] = $($header.ToString().Split('>').Split('<')[2]).replace('Release notes for ','')
+                [void]$M365VersionHistoryTable.Rows.Add($Row)
+
+            }
+        }   
+    }
+}
+
+Function New-MSDefenderDefsTable {
+
+    # Windows release info URLs
+    $URLs = @(
+        "https://www.microsoft.com/en-us/wdsi/defenderupdates"
+        #"https://docs.microsoft.com/en-us/windows/release-health/windows11-release-information"
+    )
+    If ($MSDefenderDefsTable.Columns.Count -eq 0)
+        {
+        $MSDefenderDefsTable.Columns.AddRange(@("Version","Engine Version","Platform Version","Released","Category"))
+        }
+
+    
+
+    # Process each Windows release
+    foreach ($URL in $URLs)
+    {
+        Invoke-WebRequest -URI $URL -OutFile $Destination\winreleaseinfo.html -UseBasicParsing
+        $htmlarray = Get-Content $Destination\winreleaseinfo.html -ReadCount 0
+        # get the headers and data cells
+        $headers = $htmlarray | Select-String -SimpleMatch "The latest security intelligence update is" | Where-Object {$_ -notmatch "Related"}
+        $dataCells = $htmlarray | Select-String -SimpleMatch "</span></li>"
+
+        # process each header
+        $i = 1
+        do {
+            foreach ($header in $headers | Where-Object {$_ -match "intelligence"})
+            {
+                $lineNumber = $header.LineNumber
+                $nextHeader = $headers[$i]
+                If ($null -ne $nextHeader)
+                {
+                    $nextHeaderLineNumber = $nextHeader.LineNumber
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber -and $_.LineNumber -lt $nextHeaderLineNumber}
+                }
+                else 
+                {
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber}  
+                }
+
+                # process each cell
+                $totalCells = $cells.Count
+                $t = 0
+                do {
+                    $Row = $MSDefenderDefsTable.NewRow()
+                    "Version","Engine Version","Platform Version","Released" | ForEach-Object {
+                        if ($cells[$t] -match "dateofrelease"){
+                            $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
+                            $Row["$_"] = $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
+                        }
+                        else {
+                            $(($cells[$t].ToString().Replace('<span>',"")).Replace('</span></li>',"").Split(':')[1].Trim())
+                            $Row["$_"] = $(($cells[$t].ToString().Replace('<span>',"")).Replace('</span></li>',"").Split(':')[1].Trim())
+                        }
+                        $t ++
+                    }
+                    $Row["Category"] = "$($header.ToString().Split('>').Split(' is:<')[1])"
+                    [void]$MSDefenderDefsTable.Rows.Add($Row)
+                }
+                until ($t -ge ($totalCells -1))
+                $i ++
+            }
+        }
+        until ($i -ge $headers.count)
+
+
+    }
+}
+
 # Function to get current month's Patch Tuesday
 # Thanks to https://github.com/tsrob50/Get-PatchTuesday/blob/master/Get-PatchTuesday.ps1
 Function script:Get-PatchTuesday {
@@ -785,95 +983,162 @@ $script:EditionsDatatable = [System.Data.DataTable]::new()
 $script:UpdateHistoryTable = [System.Data.DataTable]::new()
 $script:LatestUpdateTable = [System.Data.DataTable]::new()
 $script:VersionBuildTable = [System.Data.DataTable]::new()
+$script:M365SupportedVersionTable = [System.Data.DataTable]::new()
+$script:M365VersionHistoryTable = [System.Data.DataTable]::new()
+$script:MSDefenderDefsTable = [System.Data.DataTable]::new()
+
 
 # Build the OS info tables
-New-OSVersionBuildTable
-New-SupportTable
-New-UpdateHistoryTable
-New-LatestUpdateTable
-
-
-
+if ($RunVersionBuildTable -eq $true){New-OSVersionBuildTable}
+if ($RunEditionsDatatable -eq $true){New-SupportTable}
+if ($RunUpdateHistoryTable -eq $true){New-UpdateHistoryTable}
+if ($RunLatestUpdateTable -eq $true){New-LatestUpdateTable}
+if ($RunM365SupportedVersionTable -eq $true){New-M365SupportedVersionsTable}
+if ($RunM365VersionHistoryTable -eq $true){New-M365VersionsHistoryTable}
+if ($RunMSDefenderDefsTable -eq $true){New-MSDefenderDefsTable}
 
 # Post the tables off to Azure Storage Table
-$OSEditionsTableData = $EditionsDatatable.Rows | Select $EditionsDatatable.Columns.ColumnName
-$i = 0
-Foreach ($Data in $OSEditionsTableData){
-    $i++
-    $body = @{
-        RowKey = $i
-        WindowsRelease = $Data."Windows Release"
-        Version = $Data.Version
-        StartDate = $Data.StartDate
-        EndDate = $Data.EndDate
-        SupportPeriodInDays = $Data.SupportPeriodInDays
-        InSupport = $Data.InSupport
-        SupportDaysRemaining = $Data.SupportDaysRemaining
-        EditionFamily = $Data.EditionFamily
+
+if ($RunM365VersionHistoryTable -eq $true){
+    Write-Host "Starting M365VersionsHistoryTable"
+    $M365VersionsHistoryTableData = $M365VersionHistoryTable.Rows | Select $M365VersionHistoryTable.Columns.ColumnName
+    $i = 0
+    Foreach ($Data in $M365VersionsHistoryTableData){
+        $i++
+        $body = @{
+            RowKey = $i
+            Version = $Data.Version
+            Month = $Data.Month
+            Build = $Data.Build
+            Channel = $Data.Category
+        }
+        Write-Output "$i | $($Data.Version) | $($Data.Month) | $($Data.Build) | $($Data.Category)"
+        InsertReplaceTableEntity -TableName "M365VersionsHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
     }
-    InsertReplaceTableEntity -TableName "OSEditionsTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
 }
 
-$OSUpdateHistoryTable = $UpdateHistoryTable.Rows | Select $UpdateHistoryTable.Columns.ColumnName 
-$i = 0
-Foreach ($Data in $OSUpdateHistoryTable){
-    $i++
-    $body = @{
-        RowKey = $i
-        WindowsRelease = $Data."Windows Release"
-        ReleaseDate = $Data.ReleaseDate
-        KB = $Data.KB
-        OSBuild = $Data.OSBuild
-        OSBaseBuild = $Data.OSBaseBuild
-        OSRevisionNumber = $Data.OSRevisionNumber
-        OSVersion = $Data.OSVersion
-        Type = $Data.Type
+if ($RunM365SupportedVersionTable -eq $true){
+    Write-Host "Starting M365VersionSupportTable"
+    $M365SupportedVersionTableData = $M365SupportedVersionTable.Rows | Select $M365SupportedVersionTable.Columns.ColumnName
+    $i = 0
+    Foreach ($Data in $M365SupportedVersionTableData){
+        $i++
+        $body = @{
+            RowKey = $i
+            Channel = $Data.Channel
+            Version = $Data.Version
+            Build = $Data.Build
+            LatestReleaseDate  = $Data.'Latest release date'
+            VersionAvailabilityDate = $Data.'Version availability date'
+            EndOfService = $Data.'End of service'
+
+        }
+        InsertReplaceTableEntity -TableName "M365VersionSupportTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
     }
-    InsertReplaceTableEntity -TableName "OSUpdateHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
+}
+if ($RunEditionsDatatable -eq $true){
+    Write-Host "Starting OSEditionsTable"
+    $OSEditionsTableData = $EditionsDatatable.Rows | Select $EditionsDatatable.Columns.ColumnName
+    $i = 0
+    Foreach ($Data in $OSEditionsTableData){
+        $i++
+        $body = @{
+            RowKey = $i
+            WindowsRelease = $Data."Windows Release"
+            Version = $Data.Version
+            StartDate = $Data.StartDate
+            EndDate = $Data.EndDate
+            SupportPeriodInDays = $Data.SupportPeriodInDays
+            InSupport = $Data.InSupport
+            SupportDaysRemaining = $Data.SupportDaysRemaining
+            EditionFamily = $Data.EditionFamily
+        }
+        InsertReplaceTableEntity -TableName "OSEditionsTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
+    }
 }
 
-
-
-$OSLatestUpdateTable = $LatestUpdateTable.Rows | Select $LatestUpdateTable.Columns.ColumnName
-$i = 0
-Foreach ($Data in $OSLatestUpdateTable){
-    $i++
-    $body = @{
-        RowKey = $i
-        WindowsRelease = $Data."Windows Release"
-        OSBaseBuild = $Data.OSBaseBuild
-        OSVersion = $Data.OSVersion
-        LatestUpdate = $Data.LatestUpdate
-        LatestUpdate_KB = $Data.LatestUpdate_KB
-        LatestUpdate_ReleaseDate = $Data.LatestUpdate_ReleaseDate
-        LatestRegularUpdate = $Data.LatestRegularUpdate
-        LatestRegularUpdate_KB = $Data.LatestRegularUpdate_KB
-        LatestRegularUpdate_ReleaseDate = $Data.LatestRegularUpdate_ReleaseDate
-        LatestPreviewUpdate = $Data.LatestPreviewUpdate
-        LatestPreviewUpdate_KB = $Data.LatestPreviewUpdate_KB
-        LatestPreviewUpdate_ReleaseDate = $Data.LatestPreviewUpdate_ReleaseDate
-        LatestOutofBandUpdate = $Data.LatestOutofBandUpdate
-        LatestOutofBandUpdate_KB = $Data.LatestOutofBandUpdate_KB
-        LatestOutofBandUpdate_ReleaseDate = $Data.LatestOutofBandUpdate_ReleaseDate
-        LatestRegularUpdateLess1 = $Data.LatestRegularUpdateLess1
-        LatestRegularUpdateLess1_KB = $Data.LatestRegularUpdateLess1_KB
-        LatestRegularUpdateLess1_ReleaseDate = $Data.LatestRegularUpdateLess1_ReleaseDate
-        LatestPreviewUpdateLess1 = $Data.LatestPreviewUpdateLess1
-        LatestPreviewUpdateLess1_KB = $Data.LatestPreviewUpdateLess1_KB
-        LatestPreviewUpdateLess1_ReleaseDate = $Data.LatestPreviewUpdateLess1_ReleaseDate
-        LatestOutofBandUpdateLess1 = $Data.LatestOutofBandUpdateLess1
-        LatestOutofBandUpdateLess1_KB = $Data.LatestOutofBandUpdateLess1_KB
-        LatestOutofBandUpdateLess1_ReleaseDate = $Data.LatestOutofBandUpdateLess1_ReleaseDate
-        LatestRegularUpdateLess2 = $Data.LatestRegularUpdateLess2
-        LatestRegularUpdateLess2_KB = $Data.LatestRegularUpdateLess2_KB
-        LatestRegularUpdateLess2_ReleaseDate = $Data.LatestRegularUpdateLess2_ReleaseDate
-        LatestPreviewUpdateLess2 = $Data.LatestPreviewUpdateLess2
-        LatestPreviewUpdateLess2_KB = $Data.LatestPreviewUpdateLess2_KB
-        LatestPreviewUpdateLess2_ReleaseDate = $Data.LatestPreviewUpdateLess2_ReleaseDate
-        LatestOutofBandUpdateLess2 = $Data.LatestOutofBandUpdateLess2
-        LatestOutofBandUpdateLess2_KB = $Data.LatestOutofBandUpdateLess2_KB
-        LatestOutofBandUpdateLess2_ReleaseDate = $Data.LatestOutofBandUpdateLess2_ReleaseDate
-        LatestUpdateType = $Data.LatestUpdateType
+if ($RunUpdateHistoryTable -eq $true){
+    Write-Host "Starting OSUpdateHistoryTable"
+    $OSUpdateHistoryTable = $UpdateHistoryTable.Rows | Select $UpdateHistoryTable.Columns.ColumnName 
+    $i = 0
+    Foreach ($Data in $OSUpdateHistoryTable){
+        $i++
+        $body = @{
+            RowKey = $i
+            WindowsRelease = $Data."Windows Release"
+            ReleaseDate = $Data.ReleaseDate
+            KB = $Data.KB
+            OSBuild = $Data.OSBuild
+            OSBaseBuild = $Data.OSBaseBuild
+            OSRevisionNumber = $Data.OSRevisionNumber
+            OSVersion = $Data.OSVersion
+            Type = $Data.Type
+        }
+        InsertReplaceTableEntity -TableName "OSUpdateHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
     }
-    InsertReplaceTableEntity -TableName "OSLatestUpdateTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
+}
+
+if ($RunLatestUpdateTable -eq $true){
+    Write-Host "Starting OSLatestUpdateTable"
+    $OSLatestUpdateTable = $LatestUpdateTable.Rows | Select $LatestUpdateTable.Columns.ColumnName
+    $i = 0
+    Foreach ($Data in $OSLatestUpdateTable){
+        $i++
+        $body = @{
+            RowKey = $i
+            WindowsRelease = $Data."Windows Release"
+            OSBaseBuild = $Data.OSBaseBuild
+            OSVersion = $Data.OSVersion
+            LatestUpdate = $Data.LatestUpdate
+            LatestUpdate_KB = $Data.LatestUpdate_KB
+            LatestUpdate_ReleaseDate = $Data.LatestUpdate_ReleaseDate
+            LatestRegularUpdate = $Data.LatestRegularUpdate
+            LatestRegularUpdate_KB = $Data.LatestRegularUpdate_KB
+            LatestRegularUpdate_ReleaseDate = $Data.LatestRegularUpdate_ReleaseDate
+            LatestPreviewUpdate = $Data.LatestPreviewUpdate
+            LatestPreviewUpdate_KB = $Data.LatestPreviewUpdate_KB
+            LatestPreviewUpdate_ReleaseDate = $Data.LatestPreviewUpdate_ReleaseDate
+            LatestOutofBandUpdate = $Data.LatestOutofBandUpdate
+            LatestOutofBandUpdate_KB = $Data.LatestOutofBandUpdate_KB
+            LatestOutofBandUpdate_ReleaseDate = $Data.LatestOutofBandUpdate_ReleaseDate
+            LatestRegularUpdateLess1 = $Data.LatestRegularUpdateLess1
+            LatestRegularUpdateLess1_KB = $Data.LatestRegularUpdateLess1_KB
+            LatestRegularUpdateLess1_ReleaseDate = $Data.LatestRegularUpdateLess1_ReleaseDate
+            LatestPreviewUpdateLess1 = $Data.LatestPreviewUpdateLess1
+            LatestPreviewUpdateLess1_KB = $Data.LatestPreviewUpdateLess1_KB
+            LatestPreviewUpdateLess1_ReleaseDate = $Data.LatestPreviewUpdateLess1_ReleaseDate
+            LatestOutofBandUpdateLess1 = $Data.LatestOutofBandUpdateLess1
+            LatestOutofBandUpdateLess1_KB = $Data.LatestOutofBandUpdateLess1_KB
+            LatestOutofBandUpdateLess1_ReleaseDate = $Data.LatestOutofBandUpdateLess1_ReleaseDate
+            LatestRegularUpdateLess2 = $Data.LatestRegularUpdateLess2
+            LatestRegularUpdateLess2_KB = $Data.LatestRegularUpdateLess2_KB
+            LatestRegularUpdateLess2_ReleaseDate = $Data.LatestRegularUpdateLess2_ReleaseDate
+            LatestPreviewUpdateLess2 = $Data.LatestPreviewUpdateLess2
+            LatestPreviewUpdateLess2_KB = $Data.LatestPreviewUpdateLess2_KB
+            LatestPreviewUpdateLess2_ReleaseDate = $Data.LatestPreviewUpdateLess2_ReleaseDate
+            LatestOutofBandUpdateLess2 = $Data.LatestOutofBandUpdateLess2
+            LatestOutofBandUpdateLess2_KB = $Data.LatestOutofBandUpdateLess2_KB
+            LatestOutofBandUpdateLess2_ReleaseDate = $Data.LatestOutofBandUpdateLess2_ReleaseDate
+            LatestUpdateType = $Data.LatestUpdateType
+        }
+        InsertReplaceTableEntity -TableName "OSLatestUpdateTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
+    }
+}
+
+if ($RunMSDefenderDefsTable -eq $true){
+    Write-Host "Starting MSDefenderDefsTableInfo"
+    $MSDefenderDefsTableInfo = $MSDefenderDefsTable.Rows | Select $MSDefenderDefsTable.Columns.ColumnName 
+    $i = 0
+    Foreach ($Data in $MSDefenderDefsTableInfo){
+        $i++
+        $body = @{
+            RowKey = $i
+            Version = $Data.Version
+            EngineVersion = $Data."Engine Version"
+            PlatformVersion = $Data."Platform Version"
+            Released = $Data.Released
+
+        }
+        InsertReplaceTableEntity -TableName "MSWinDefenderDefsInfo" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
+    }
 }
