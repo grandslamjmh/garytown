@@ -1,6 +1,6 @@
 ############################################################################
-##  AZURE AUTOMATION RUNBOOK TO EXPORT MICROSOFT UPDATE RELEASE INFORMATION ##
-##  FROM MS DOCS TO Several Azure Storage Tables   
+##  AZURE AUTOMATION RUNBOOK TO EXPORT WINDOWS UPDATE RELEASE INFORMATION ##
+##  FROM MS DOCS TO 3 Azure Storage Tables   
 ##
 ############################################################################
 
@@ -1146,15 +1146,15 @@ if ($RunM365VersionHistoryTable -eq $true){
         $i++
         $body = @{
             RowKey = $i
-            Version = $Data.Version
-            ReleaseDate = $Data.ReleaseDate
-            Release = $Data.Release
-            Build = $Data.FullBuild
-            Channel = $Data.Channel
-            ChannelShortName = $Data.ChannelShortName
-            ChannelBuild = $Data.ChannelBuild
+            Version = $($Data.Version).ToString()
+            ReleaseDate = $($Data.ReleaseDate).ToString()
+            Release = $($Data.Release).ToString()
+            Build = $($Data.FullBuild).ToString()
+            Channel = $($Data.Channel).ToString()
+            ChannelShortName = $($Data.ChannelShortName).ToString()
+            ChannelBuild = $($Data.ChannelBuild).ToString()
         }
-        Write-Output "$i | $($Data.Version) | $($Data.Month) | $($Data.Build) | $($Data.Category)"
+        Write-Output "$i | $($Data.Version) | $($Data.ReleaseDate) | $($Data.Release) | $($Data.FullBuild) | $($Data.Channel) | $($Data.ChannelShortName) | $($Data.ChannelBuild)"
         InsertReplaceTableEntity -TableName "M365VersionsHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
     }
 }
