@@ -1,6 +1,6 @@
 ############################################################################
-##  AZURE AUTOMATION RUNBOOK TO EXPORT WINDOWS UPDATE RELEASE INFORMATION ##
-##  FROM MS DOCS TO 3 Azure Storage Tables   
+##  AZURE AUTOMATION RUNBOOK TO EXPORT MICROSOFT UPDATE RELEASE INFORMATION ##
+##  FROM MS DOCS TO Several Azure Storage Tables   
 ##
 ############################################################################
 
@@ -40,6 +40,9 @@ Changes from the orginal script are
   
   Modified Date 2022.08.16 - Added Defender Def Version (MSWinDefenderDefsInfo)
    - Also added logic to run only specific tests.  I'm using this to be able to keep the same script consistent in Azure automation, but have some run more frequently.
+
+  Modified Date 2022.08.23 - Modifed M365 History to use different URL, borrowed a function from: https://github.com/binSHA3/O356Versions/blob/main/Get-O365Data.ps1
+
 #>
 
 $storageAccount = "garytownstorage"
@@ -98,6 +101,51 @@ function InsertReplaceTableEntity($TableName, $PartitionKey, $RowKey, $entity) {
     }
 }
 
+function Format-VersionHistoryTable {
+    [cmdletbinding()]
+    param (
+        [Object] $TableObject
+    )
+
+    [String[]] $channels = $tableobject[0].psobject.Properties.Name | Where-Object { $_ -like "*Channel*" }
+    [String] $lastYear = $null
+
+    foreach ($row in $TableObject) {
+
+        if ($row.Year){ 
+            $lastYear = $row.Year
+        } else {
+            $row.Year = $lastYear
+        }
+
+        $relaseDateAry = $row.'Release date'.Split(' ')
+        $month = [array]::indexof([cultureinfo]::CurrentCulture.DateTimeFormat.MonthNames, $relaseDateAry[0]) + 1
+        $day = $relaseDateAry[1]
+        $releaseDateStr = "$($day.PadLeft(2,'0'))-$($month.ToString().PadLeft(2,'0'))-$($row.Year)"
+        $releaseDate = [datetime]::parseexact($releaseDateStr, 'dd-MM-yyyy', $null)
+
+        foreach ($channel in $channels){
+            $versionBuilds = $row.$channel.split(')')
+            $release = 0
+            foreach ($vb in $versionBuilds){
+                $tempAry = $vb.Split('(')
+                if ($tempAry[1]){
+                    $channelBuild = $tempAry[1].Replace('Build ','').Replace(')','')
+                    [PSCustomObject]([ordered]@{
+                        Channel = $channel;
+                        ChannelShortName = $channel.Replace('Channel', '').Replace('Enterprise', '').Replace('-', '').Replace('(', '').Replace(')', '').Replace(' ', '');
+                        Version = $tempAry[0].Replace('Version ', '').Trim()
+                        ChannelBuild = $channelBuild
+                        FullBuild = ([version] "16.0.$($channelBuild)")
+                        ReleaseDate = $releaseDate
+                        Release = $release
+                    })
+                    $release++
+                }              
+            }
+        }
+    }
+}
 
 Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
 {
@@ -787,6 +835,89 @@ Function New-M365SupportedVersionsTable {
     }
 }
 
+$script:M365SupportedVersionTableHistory = [System.Data.DataTable]::new()
+
+# Function to extract M365 Supported Versions from MS docs
+Function New-M365SupportedVersionsTableHistory {
+
+    # Windows release info URLs
+    $URLs = @(
+        "https://docs.microsoft.com/en-us/officeupdates/update-history-microsoft365-apps-by-date"
+        #"https://docs.microsoft.com/en-us/windows/release-health/windows11-release-information"
+    )
+    If ($M365SupportedVersionTableHistory.Columns.Count -eq 0)
+        {
+        $M365SupportedVersionTableHistory.Columns.AddRange(@("Year","Release Date","Current Channel","Monthly Enterprise Channel","Semi-Annual Enterprise Channel (Preview)","Semi-Annual Enterprise Channel","Blank","Category"))
+        }
+
+    
+
+    # Process each Windows release
+    foreach ($URL in $URLs)
+    {
+        Invoke-WebRequest -URI $URL -OutFile $Destination\winreleaseinfo.html -UseBasicParsing
+        $htmlarray = Get-Content $Destination\winreleaseinfo.html -ReadCount 0
+        # get the headers and data cells
+        $headers = $htmlarray | Select-String -SimpleMatch "<h3 " | Where {$_ -match "Version History"}
+        $dataCells = $htmlarray | Select-String -SimpleMatch "</td>"
+
+        # process each header
+        $i = 1
+        do {
+            foreach ($header in $headers | Where-Object {$_ -match "Version History"})
+            {
+                $lineNumber = $header.LineNumber
+                $nextHeader = $headers[$i]
+                If ($null -ne $nextHeader)
+                {
+                    $nextHeaderLineNumber = $nextHeader.LineNumber
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber -and $_.LineNumber -lt $nextHeaderLineNumber}
+                }
+                else 
+                {
+                    $cells = $dataCells | Where {$_.LineNumber -gt $lineNumber}  
+                }
+
+                # process each cell
+                $totalCells = $cells.Count
+                $t = 0
+                do {
+                    $Row = $M365SupportedVersionTableHistory.NewRow()
+                    "Year","Release Date","Current Channel","Monthly Enterprise Channel","Semi-Annual Enterprise Channel (Preview)","Semi-Annual Enterprise Channel","blank" | foreach {
+                        if ($cells[$t].ToString() -match '<td style="text-align: left;"><a href="'){
+                            $keep = $($($cells[$t].ToString().replace('<td style=`"text-align: left;`">','').replace('<a href="semi-annual-enterprise-channel','').replace('<a href="monthly-enterprise-channel','').replace('<a href="monthly-enterprise-channel-archived','').replace('</a><br/>','').replace('</a></td>','').replace('</a','').replace('-archived','').replace('</td',''))).split('>')
+                            
+                            $CurrentArray = @()
+                            ForEach ($Item in $keep){
+                                if ($Item.startswith("Version") -eq $true){
+                                    #Write-Output $Item
+                                    $Item = $item.Split('#')[0]
+                                    $CurrentArray += $Item
+                                }
+                            }
+                            $VersionData = $CurrentArray -join ' '
+                            $Row["$_"] = $VersionData
+                            }
+                        else
+                            {
+                            $Row["$_"] = "$($cells[$t].ToString().Replace('<code>','').Replace('</code>','').Split('>').Split('<')[2])"
+                            }
+                        #$cells[$t]
+                        $t ++
+                    }
+                    $Row["Category"] = "$($header.ToString().Split('>').Split('<')[4])"
+                    if ($Row.Year -eq ""){}
+                    else{[void]$M365SupportedVersionTableHistory.Rows.Add($Row)}
+                }
+                until ($t -ge ($totalCells -1))
+                $i ++
+            }
+        }
+        until ($i -ge $headers.count)
+    }
+    $script:FormattedVersionHistory = Format-VersionHistoryTable -TableObject ($M365SupportedVersionTableHistory).Rows | Sort-Object ReleaseDateDate, Channel, FullBuild
+}
+
 # Function to extract M365 Supported Versions from MS docs
 Function New-M365VersionsHistoryTable {
 
@@ -808,6 +939,7 @@ Function New-M365VersionsHistoryTable {
     # Process each Windows release
     foreach ($URL in $URLs)
     {
+        #Write-Host "$URL" -ForegroundColor Cyan
         Invoke-WebRequest -URI $URL -OutFile $Destination\winreleaseinfo.html -UseBasicParsing
         $htmlarray = Get-Content $Destination\winreleaseinfo.html -ReadCount 0
         # get the headers and data cells
@@ -818,7 +950,12 @@ Function New-M365VersionsHistoryTable {
             foreach ($Version in $Versions)#{}
             {
                 $M365Version = "$($Version.ToString().Split('>').Split('<')[2].Split(':')[0].Trim())"
+                #Write-Output $M365Version
                 $M365Month = "$($Version.ToString().Split('>').Split('<')[2].Split(':')[1].Trim())"
+                if ($M365Month -match "Build"){
+                    $M365Month = $M365Month.Split("(")[0]
+                }
+                #Write-Output $M365Month
                 #$Build = $Builds | Where-Object {$_ -match "$M365Version"}
                 $VersionLineNumber = $Version.LineNumber
                 $M365Build = $($($Builds | Where-Object {$_.LineNumber -eq ($VersionLineNumber + 1)}).ToString().Split('>').Split('<')[4].Split(' ')[3].replace(')',''))
@@ -984,7 +1121,8 @@ $script:UpdateHistoryTable = [System.Data.DataTable]::new()
 $script:LatestUpdateTable = [System.Data.DataTable]::new()
 $script:VersionBuildTable = [System.Data.DataTable]::new()
 $script:M365SupportedVersionTable = [System.Data.DataTable]::new()
-$script:M365VersionHistoryTable = [System.Data.DataTable]::new()
+$script:M365SupportedVersionTableHistory = [System.Data.DataTable]::new()
+#$script:M365VersionHistoryTable = [System.Data.DataTable]::new()
 $script:MSDefenderDefsTable = [System.Data.DataTable]::new()
 
 
@@ -994,23 +1132,27 @@ if ($RunEditionsDatatable -eq $true){New-SupportTable}
 if ($RunUpdateHistoryTable -eq $true){New-UpdateHistoryTable}
 if ($RunLatestUpdateTable -eq $true){New-LatestUpdateTable}
 if ($RunM365SupportedVersionTable -eq $true){New-M365SupportedVersionsTable}
-if ($RunM365VersionHistoryTable -eq $true){New-M365VersionsHistoryTable}
+if ($RunM365VersionHistoryTable -eq $true){New-M365SupportedVersionsTableHistory}
+#if ($RunM365VersionHistoryTable -eq $true){New-M365VersionsHistoryTable}
 if ($RunMSDefenderDefsTable -eq $true){New-MSDefenderDefsTable}
 
 # Post the tables off to Azure Storage Table
 
 if ($RunM365VersionHistoryTable -eq $true){
     Write-Host "Starting M365VersionsHistoryTable"
-    $M365VersionsHistoryTableData = $M365VersionHistoryTable.Rows | Select $M365VersionHistoryTable.Columns.ColumnName
+    $M365VersionsHistoryTableData = $FormattedVersionHistory # | Select $FormattedVersionHistory.Columns.ColumnName
     $i = 0
     Foreach ($Data in $M365VersionsHistoryTableData){
         $i++
         $body = @{
             RowKey = $i
             Version = $Data.Version
-            Month = $Data.Month
-            Build = $Data.Build
-            Channel = $Data.Category
+            ReleaseDate = $Data.ReleaseDate
+            Release = $Data.Release
+            Build = $Data.FullBuild
+            Channel = $Data.Channel
+            ChannelShortName = $Data.ChannelShortName
+            ChannelBuild = $Data.ChannelBuild
         }
         Write-Output "$i | $($Data.Version) | $($Data.Month) | $($Data.Build) | $($Data.Category)"
         InsertReplaceTableEntity -TableName "M365VersionsHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
