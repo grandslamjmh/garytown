@@ -1,12 +1,12 @@
-#Gary Blok | @gwblok | Recast Software
+#Gary Blok | @gwblok | GARYTOWN
 #Create ConfigMgr Control Panel Shortcut & Software Center Shortcut on Desktop
 
 $Remediation = $true
 
-#Build ShortCut Information
+#Build ShortCut Information - Control Panel
 $SourceExe = "$env:windir\system32\control.exe"
 $DestinationPath = "$env:Public\Desktop\Control Panel.lnk"
-
+$ArgumentsToSourceExe = $Null
 if (!(Test-Path -Path $DestinationPath)){
 
     if ($Remediation -eq $true){
@@ -24,9 +24,8 @@ if (!(Test-Path -Path $DestinationPath)){
 
 }
 
-#Build ShortCut Information
+#Build ShortCut Information - ConfigMgr Control Applet
 $SourceExe = "$env:windir\system32\control.exe"
-$ArgumentsToSourceExe = 
 $DestinationPath = "$env:Public\Desktop\ConfigMgr Panel.lnk"
 
 if (!(Test-Path -Path $DestinationPath)){
@@ -46,7 +45,7 @@ if (!(Test-Path -Path $DestinationPath)){
 
 }
 
-#Build ShortCut Information
+#Build ShortCut Information - Software Center
 $SourceExe = "$env:windir\CCM\ClientUX\SCClient.exe"
 $ArgumentsToSourceExe = "softwarecenter:Page=AvailableSoftware"
 $DestinationPath = "$env:Public\Desktop\Software Center.lnk"
