@@ -11,16 +11,15 @@ Function Restart-ByPassComputerCM {
         $Null = New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\SMS\Mobile Client\Reboot Management\RebootData' -Name 'PreferredRebootWindowTypes' -Value @("4") -PropertyType MultiString -Force -ea SilentlyContinue;
         $Null = New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\SMS\Mobile Client\Reboot Management\RebootData' -Name 'GraceSeconds' -Value 0 -PropertyType DWord -Force -ea SilentlyContinue;
 
-        if ((Get-BitLockerVolume).ProtectionStatus){
-            #Write-Host "Suspending Bitlocker"
-            Suspend-BitLocker -MountPoint $env:SystemDrive -RebootCount 2 
+        $BLStatus = (Get-BitLockerVolume -ErrorAction SilentlyContinue).ProtectionStatus | Out-Null
+        if ($BLStatus -eq "On"){
+            $MountPoint = (Get-BitLockerVolume).MountPoint  | Out-Null
+            $Suspend = Suspend-BitLocker -MountPoint $MountPoint -RebootCount 2  | Out-Null
+            }
 
-        }
-
-        start-process -FilePath C:\windows\ccm\CcmRestart.exe
+        $CCMRestart = start-process -FilePath C:\windows\ccm\CcmRestart.exe -NoNewWindow -PassThru
     }
     else {
         Write-Output "No CM Client Found"
     }
-
 }
