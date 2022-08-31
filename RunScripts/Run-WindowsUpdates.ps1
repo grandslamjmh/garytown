@@ -72,7 +72,7 @@ if ($WUUpdates.Count -ge 1){
     else
         {
         Write-Output "Available Updates:"
-        foreach ($update in $WUUpdates.Updates){Write-Host "$($update.Title)"}
+        foreach ($update in $WUUpdates){Write-Host "$($update.Title)"}
      }
 } 
 else {
