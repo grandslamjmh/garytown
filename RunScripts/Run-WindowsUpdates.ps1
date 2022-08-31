@@ -10,9 +10,9 @@ Installing Updates using this Method does NOT notify the user, and does NOT let 
 #>
 [CmdletBinding()]
     Param (
-		    [Parameter(Mandatory=$true)][string]$CMReboot = "FALSE",
-            [Parameter(Mandatory=$true)][string]$RestartNow = "FALSE",
-            [Parameter(Mandatory=$true)][string]$Install = "FALSE"
+		    [Parameter(Mandatory=$false)][string]$CMReboot = "FALSE",
+            [Parameter(Mandatory=$false)][string]$RestartNow = "FALSE",
+            [Parameter(Mandatory=$false)][string]$Install = "FALSE"
 	    )
 
 Function Restart-ComputerCM {
