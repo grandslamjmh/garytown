@@ -65,7 +65,8 @@ if ($WUUpdates.Count -ge 1){
         $ResultMeaning = ($Results | Where-Object {$_.ResultCode -eq $Install.ResultCode}).Meaning
         Write-Output $ResultMeaning
         if ($Install.RebootRequired -eq $true){
-            if ($CMReboot -eq "TRUE"){Restart-ComputerCM}
+            Write-Output "Updates Require Restart"
+            if ($CMReboot -eq "TRUE"){Write-Output "Triggering CM Restart"; Restart-ComputerCM}
             if ($RestartNow -eq "TRUE") {Restart-Computer -Force}
         }
     }
