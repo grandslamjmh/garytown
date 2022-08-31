@@ -12,7 +12,7 @@ Installing Updates using this Method does NOT notify the user, and does NOT let 
     Param (
 		    [Parameter(Mandatory=$false)][string]$CMReboot = "FALSE",
             [Parameter(Mandatory=$false)][string]$RestartNow = "FALSE",
-            [Parameter(Mandatory=$false)][string]$Install = "FALSE"
+            [Parameter(Mandatory=$false)][string]$InstallUpdates = "FALSE"
 	    )
 
 Function Restart-ComputerCM {
@@ -53,7 +53,7 @@ $WUUpdates=New-Object -ComObject Microsoft.Update.UpdateColl
 }
 
 if ($WUUpdates.Count -ge 1){
-    if ($Install -eq "TRUE"){
+    if ($InstallUpdates -eq "TRUE"){
         $WUInstaller.ForceQuiet=$true
         $WUInstaller.Updates=$WUUpdates
         $WUDownloader.Updates=$WUUpdates
