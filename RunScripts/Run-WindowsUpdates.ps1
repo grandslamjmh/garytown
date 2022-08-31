@@ -3,7 +3,9 @@ Gary Blok - GARYTOWN.COM
 NOTE: I'm using this in a RUN SCRIPT, so I hav the Parameters set to STRING, and in the RUN SCRIPT, I Create a list of options (TRUE & FALSE).
 In a normal script, you wouldn't do this... so modify for your deployment method.
 
-THis was also intended to be used with ConfigMgr, if you're not, feel free to remove the $CMReboot & Corrisponding Function
+This was also intended to be used with ConfigMgr, if you're not, feel free to remove the $CMReboot & Corrisponding Function
+
+Installing Updates using this Method does NOT notify the user, and does NOT let the user know that updates need to be applied at the next reboot.  It's 100% hidden.
 
 #>
 [CmdletBinding()]
