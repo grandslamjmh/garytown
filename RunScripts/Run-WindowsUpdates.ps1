@@ -12,7 +12,8 @@ Installing Updates using this Method does NOT notify the user, and does NOT let 
     Param (
 		    [Parameter(Mandatory=$false)][string]$CMReboot = "FALSE",
             [Parameter(Mandatory=$false)][string]$RestartNow = "FALSE",
-            [Parameter(Mandatory=$false)][string]$InstallUpdates = "FALSE"
+            [Parameter(Mandatory=$false)][string]$InstallUpdates = "FALSE",
+            [Parameter(Mandatory=$false)][string]$ClearTargetReleaseVersion = "FALSE"
 	    )
 
 Function Restart-ComputerCM {
@@ -44,6 +45,8 @@ $Results = @(
 @{ ResultCode = '5'; Meaning = "Aborted"}
 )
 
+$WindowsUpdateRegPathLegacy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+$WindowsUpdateRegPathMDM = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Update"
 $WUDownloader=(New-Object -ComObject Microsoft.Update.Session).CreateUpdateDownloader()
 $WUInstaller=(New-Object -ComObject Microsoft.Update.Session).CreateUpdateInstaller()
 $WUUpdates=New-Object -ComObject Microsoft.Update.UpdateColl
@@ -54,6 +57,15 @@ $WUUpdates=New-Object -ComObject Microsoft.Update.UpdateColl
 
 if ($WUUpdates.Count -ge 1){
     if ($InstallUpdates -eq "TRUE"){
+        if ($ClearTargetReleaseVersion -eq "TRUE"){
+            if (Test-Path -Path $WindowsUpdateRegPathLegacy){
+                $WUReg = Get-Item -Path $WindowsUpdateRegPathLegacy 
+                if ($WUReg.GetValue('TargetReleaseVersionInfo') -ne $null){
+                Remove-ItemProperty -Path $WindowsUpdateRegPathLegacy -Name TargetReleaseVersionInfo -Force -ErrorAction SilentlyContinue
+                Remove-ItemProperty -Path $WindowsUpdateRegPathLegacy -Name TargetReleaseVersion -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
         $WUInstaller.ForceQuiet=$true
         $WUInstaller.Updates=$WUUpdates
         $WUDownloader.Updates=$WUUpdates
