@@ -60,7 +60,7 @@ if ($WUUpdates.Count -ge 1){
         write-host "Downloading " $WUDownloader.Updates.count "Updates"
         foreach ($update in $WUInstaller.Updates){Write-Host "$($update.Title)"}
         $WUDownloader.Download()
-        write-host "Installing " $WUInstaller.Updates.count "Updates"
+        write-Output "Installing " $WUInstaller.Updates.count "Updates"
         $Install = $WUInstaller.Install()
         $ResultMeaning = ($Results | Where-Object {$_.ResultCode -eq $Install.ResultCode}).Meaning
         Write-Output $ResultMeaning
@@ -73,9 +73,9 @@ if ($WUUpdates.Count -ge 1){
     else
         {
         Write-Output "Available Updates:"
-        foreach ($update in $WUUpdates){Write-Host "$($update.Title)"}
+        foreach ($update in $WUUpdates){Write-Output "$($update.Title)"}
      }
 } 
 else {
-    write-host "No updates detected"
+    write-Output "No updates detected"
 }
