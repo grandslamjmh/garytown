@@ -3,8 +3,7 @@ Gary Blok - GARYTOWN.COM
 
 When you create the Run Script, add a List for the variables and populate them with the validateset you see below.
 
-
-
+Please note, you will get A LOT of data returned in the Run Script Dialog.  Feel free to remove some of the Write-Hosts.  This was orginally written for other deployment methods.
 #>
 
 [CmdletBinding()]
