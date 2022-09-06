@@ -16,7 +16,9 @@ Please note, you will get A LOT of data returned in the Run Script Dialog.  Feel
         $Selection = "All",
         [Parameter(Mandatory=$false)]
         [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
-        $Action = "List"
+        $Action = "List",
+        [Parameter(Mandatory=$false)]
+        [String]$DebugLog = "FALSE"
         )
 
 
@@ -51,7 +53,9 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         [Parameter(Mandatory=$false)]
         $LogFolder = "$env:systemdrive\ProgramData\HP\Logs",
         [Parameter(Mandatory=$false)]
-        $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA"
+        $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA",
+        [Parameter(Mandatory=$false)]
+        [Switch]$DebugLog = $false
         )
 
     # Params
@@ -210,11 +214,19 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     ##############################################
     ## Install Updates with HPIA ##
     ##############################################
-    CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
-    Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
     try 
     {
-        $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        if ($DebugLog -eq $false){
+            CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
+            $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        }
+        else {
+            CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –Component "Update"
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" -ForegroundColor Green
+            $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        }
+        
         If ($Process.ExitCode -eq 0)
         {
             CMTraceLog –Message "Analysis complete" –Component "Update"
@@ -425,4 +437,5 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     }
 }
 
-Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action
+if ($DebugLog -eq "FALSE") {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action}
+else {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action -DebugLog}
