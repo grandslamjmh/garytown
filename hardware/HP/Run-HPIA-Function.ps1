@@ -10,6 +10,9 @@ Notes about Severity:
 Routine – For new hardware support and feature enhancements.
 Recommended – For minor bug fixes. HP recommends this SoftPaq be installed.
 Critical – For major bug fixes, specific problem resolutions, to enable new OS or Service Pack. Essentially the SoftPaq is required to receive support from HP.
+
+Chamges: 
+22.06.09 - Added Debug Parameter (DebugLog) for HPIA.  Log goes to the Report Folder.
 #>
 
 [CmdletBinding()]
@@ -27,9 +30,11 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
         $Action = "List",
         [Parameter(Mandatory=$false)]
-        $LogFolder = ""$env:systemdrive\ProgramData\HP\Logs"",
+        $LogFolder = "$env:systemdrive\ProgramData\HP\Logs",
         [Parameter(Mandatory=$false)]
-        $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA"
+        $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA",
+        [Parameter(Mandatory=$false)]
+        [Switch]$DebugLog = $false
         )
 
     # Params
@@ -188,11 +193,19 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     ##############################################
     ## Install Updates with HPIA ##
     ##############################################
-    CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
-    Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
     try 
     {
-        $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        if ($DebugLog -eq $false){
+            CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
+            $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        }
+        else {
+            CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –Component "Update"
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" -ForegroundColor Green
+            $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
+        }
+        
         If ($Process.ExitCode -eq 0)
         {
             CMTraceLog –Message "Analysis complete" –Component "Update"
