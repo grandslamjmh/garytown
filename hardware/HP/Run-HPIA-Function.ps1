@@ -27,9 +27,9 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         [ValidateSet("List", "Download", "Extract", "Install", "UpdateCVA")]
         $Action = "List",
         [Parameter(Mandatory=$false)]
-        $LogFolder = "$env:systemdrive\OSDCloud\Logs",
+        $LogFolder = ""$env:systemdrive\ProgramData\HP\Logs"",
         [Parameter(Mandatory=$false)]
-        $ReportsFolder = "$env:systemdrive\OSDCloud\HPIA"
+        $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA"
         )
 
     # Params
