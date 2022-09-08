@@ -68,7 +68,7 @@ SELECT LPC.DisplayName [App Name]
 FROM
 dbo.fn_ListApplicationCIs(1033) LPC
 RIGHT Join fn_ListDeploymentTypeCIs(1033) LDT ON LDT.AppModelName = LPC.ModelName
-Join [CM_A00].[dbo].[v_ConfigurationItems] CI on CI.ModelName = LPC.ModelName
+Join v_ConfigurationItems CI on CI.ModelName = LPC.ModelName
 where LDT.CIType_ID = 21 AND LDT.IsLatest = 1
 ) A
 GROUP BY A.[App Name],A.Type,A.ContentLocation
