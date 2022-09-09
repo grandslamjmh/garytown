@@ -166,12 +166,16 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
             If ($BitsJob.JobState -eq "Error")
             {
                 CMTraceLog –Message "BITS tranfer failed: $($BitsJob.ErrorDescription)" –Component "Download" –Type 3
-                throw
+                
             }
+            
+            if (!(Test-Path -Path "$TempWorkFolder\$HPIAFileName")){
+                $HPIA = Invoke-WebRequest -UseBasicParsing -Uri $HPIADownloadURL -OutFile $TempWorkFolder\$HPIAFileName
+            } 
             CMTraceLog –Message "Download is finished" –Component "Download"
-            Complete-BitsTransfer –BitsJob $BitsJob
-            CMTraceLog –Message "BITS transfer is complete" –Component "Download"
-            Write-Host "BITS transfer is complete" -ForegroundColor Green
+            Complete-BitsTransfer –BitsJob $BitsJob -ErrorAction SilentlyContinue
+            CMTraceLog –Message "Transfer is complete" –Component "Download"
+            Write-Host "Transfer is complete" -ForegroundColor Green
         }
         catch 
         {
