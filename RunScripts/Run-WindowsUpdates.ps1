@@ -7,6 +7,8 @@ This was also intended to be used with ConfigMgr, if you're not, feel free to re
 
 Installing Updates using this Method does NOT notify the user, and does NOT let the user know that updates need to be applied at the next reboot.  It's 100% hidden.
 
+HResult Lookup: https://docs.microsoft.com/en-us/windows/win32/wua_sdk/wua-success-and-error-codes-
+
 #>
 [CmdletBinding()]
     Param (
@@ -63,19 +65,36 @@ if ($WUUpdates.Count -ge 1){
                 if ($WUReg.GetValue('TargetReleaseVersionInfo') -ne $null){
                 Remove-ItemProperty -Path $WindowsUpdateRegPathLegacy -Name TargetReleaseVersionInfo -Force -ErrorAction SilentlyContinue
                 Remove-ItemProperty -Path $WindowsUpdateRegPathLegacy -Name TargetReleaseVersion -Force -ErrorAction SilentlyContinue
+                $WUUpdates=New-Object -ComObject Microsoft.Update.UpdateColl
                 }
             }
         }
         $WUInstaller.ForceQuiet=$true
         $WUInstaller.Updates=$WUUpdates
         $WUDownloader.Updates=$WUUpdates
-        write-host "Downloading " $WUDownloader.Updates.count "Updates"
-        foreach ($update in $WUInstaller.Updates){Write-Host "$($update.Title)"}
-        $WUDownloader.Download()
-        write-Output "Installing " $WUInstaller.Updates.count "Updates"
+        $UpdateCount = $WUDownloader.Updates.count
+        Write-Output "Downloading $UpdateCount Updates"
+        foreach ($update in $WUInstaller.Updates){Write-Output "$($update.Title)"}
+        $Download = $WUDownloader.Download()
+        if ($Download.HResult -ne 0){
+            $Convert = $Install.HResult
+            $Hex = [System.Convert]::ToString($Convert, 16)
+            $Hex = $Hex.Replace("ffffffff","0x")
+            Write-Output "Download HResult HEX: $Hex"
+
+        }
+        $InstallUpdateCount = $WUInstaller.Updates.count
+        Write-Output "Installing $InstallUpdateCount Updates"
         $Install = $WUInstaller.Install()
         $ResultMeaning = ($Results | Where-Object {$_.ResultCode -eq $Install.ResultCode}).Meaning
-        Write-Output $ResultMeaning
+        Write-Output "Result: $ResultMeaning"
+        if ($Install.HResult -ne 0){
+            $Convert = $Install.HResult
+            $Hex = [System.Convert]::ToString($Convert, 16)
+            $Hex = $Hex.Replace("ffffffff","0x")
+            Write-Output "Install HResult HEX: $Hex"
+
+        }
         if ($Install.RebootRequired -eq $true){
             Write-Output "Updates Require Restart"
             if ($CMReboot -eq "TRUE"){Write-Output "Triggering CM Restart"; Restart-ComputerCM}
