@@ -3,7 +3,7 @@ Gary Blok - GARYTOWN.COM
 
 When you create the Run Script, add a List for the variables and populate them with the validateset you see below.
 
-Please note, you will get A LOT of data returned in the Run Script Dialog.  Feel free to remove some of the Write-Outputs.  This was orginally written for other deployment methods.
+Please note, you will get A LOT of data returned in the Run Script Dialog.  Feel free to remove some of the Write-Hosts.  This was orginally written for other deployment methods.
 #>
 
 [CmdletBinding()]
@@ -115,7 +115,7 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     CMTraceLog –Message "#######################" –Component "Preparation"
     CMTraceLog –Message "## Starting HPIA  ##" –Component "Preparation"
     CMTraceLog –Message "#######################" –Component "Preparation"
-    Write-Output "Starting HPIA to Update HP Drivers" 
+    Write-Host "Starting HPIA to Update HP Drivers" -ForegroundColor Magenta
     #################################
     ## Disable IE First Run Wizard ##
     #################################
@@ -142,12 +142,12 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     $HPIAFileName = $HPIADownloadURL.Split('/')[-1]
     CMTraceLog –Message "SoftPaq number is $HPIASoftPaqNumber" –Component "Download"
     CMTraceLog –Message "Download URL is $HPIADownloadURL" –Component "Download"
-    Write-Output "Download URL is $HPIADownloadURL" 
+    Write-Host "Download URL is $HPIADownloadURL" -ForegroundColor Green
     ###################
     ## Download HPIA ##
     ###################
     CMTraceLog –Message "Downloading HPIA" –Component "DownloadHPIA"
-    Write-Output "Downloading HPIA" 
+    Write-Host "Downloading HPIA" -ForegroundColor Green
     if (!(Test-Path -Path "$TempWorkFolder\$HPIAFileName")){
         try 
         {
@@ -175,25 +175,32 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
             CMTraceLog –Message "Download is finished" –Component "Download"
             Complete-BitsTransfer –BitsJob $BitsJob -ErrorAction SilentlyContinue
             CMTraceLog –Message "Transfer is complete" –Component "Download"
-            Write-Output "Transfer is complete" 
+            Write-Host "Transfer is complete" -ForegroundColor Green
         }
         catch 
         {
-            CMTraceLog –Message "Failed to start a BITS transfer for the HPIA: $($_.Exception.Message)" –Component "Download" –Type 3
-            Write-Output "Failed to start a BITS transfer for the HPIA: $($_.Exception.Message)" 
-            throw
+            CMTraceLog –Message "Failed to start a BITS transfer for the HPIA: $($_.Exception.Message), trying Invoke-WebRequest" –Component "Download" –Type 3
+            Write-Host "Failed to start a BITS transfer for the HPIA: $($_.Exception.Message), trying Invoke-WebRequest" -ForegroundColor Red
+            if (!(Test-Path -Path "$TempWorkFolder\$HPIAFileName")){
+                $HPIA = Invoke-WebRequest -UseBasicParsing -Uri $HPIADownloadURL -OutFile $TempWorkFolder\$HPIAFileName
+            }
+            if (!(Test-Path -Path "$TempWorkFolder\$HPIAFileName")){
+                CMTraceLog –Message "Failed Download of HPIA" –Component "Download" –Type 3
+                Write-Host "Failed Download of HPIA" -ForegroundColor Red
+                throw
+            }  
         }
     }
     else
         {
         CMTraceLog –Message "$HPIAFileName already downloaded, skipping step" –Component "Download"
-        Write-Output "$HPIAFileName already downloaded, skipping step" 
+        Write-Host "$HPIAFileName already downloaded, skipping step" -ForegroundColor Green
         }
     ##################
     ## Extract HPIA ##
     ##################
     CMTraceLog –Message "Extracting HPIA" –Component "Extract"
-    Write-Output "Extracting HPIA" 
+    Write-Host "Extracting HPIA" -ForegroundColor Green
     try 
     {
         $Process = Start-Process –FilePath $TempWorkFolder\$HPIAFileName –WorkingDirectory $TempWorkFolder –ArgumentList "/s /f .\HPIA\ /e" –NoNewWindow –PassThru –Wait –ErrorAction Stop
@@ -205,14 +212,14 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         Else  
         {
             CMTraceLog –Message "HPImageAssistant not found!" –Component "Extract" –Type 3
-            Write-Output "HPImageAssistant not found!" 
+            Write-Host "HPImageAssistant not found!" -ForegroundColor Red
             throw
         }
     }
     catch 
     {
         CMTraceLog –Message "Failed to extract the HPIA: $($_.Exception.Message)" –Component "Extract" –Type 3
-        Write-Output "Failed to extract the HPIA: $($_.Exception.Message)" 
+        Write-Host "Failed to extract the HPIA: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
     ##############################################
@@ -222,71 +229,59 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     {
         if ($DebugLog -eq $false){
             CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –Component "Update"
-            Write-Output "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" 
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" -ForegroundColor Green
             $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
         }
         else {
             CMTraceLog –Message "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –Component "Update"
-            Write-Output "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" 
+            Write-Host "Running HPIA With Args: /Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" -ForegroundColor Green
             $Process = Start-Process –FilePath $TempWorkFolder\HPIA\HPImageAssistant.exe –WorkingDirectory $TempWorkFolder –ArgumentList "/Operation:$Operation /Category:$Category /Selection:$Selection /Action:$Action /Silent /Debug /ReportFolder:$ReportsFolder" –NoNewWindow –PassThru –Wait –ErrorAction Stop
         }
         
         If ($Process.ExitCode -eq 0)
         {
             CMTraceLog –Message "Analysis complete" –Component "Update"
-            Write-Output "Analysis complete" 
+            Write-Host "Analysis complete" -ForegroundColor Green
         }
         elseif ($Process.ExitCode -eq 256) 
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - The analysis returned no recommendation." –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - The analysis returned no recommendation." 
+            Write-Host "Exit $($Process.ExitCode) - The analysis returned no recommendation." -ForegroundColor Green
             Exit 0
         }
          elseif ($Process.ExitCode -eq 257) 
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - There were no recommendations selected for the analysis." –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - There were no recommendations selected for the analysis." 
+            Write-Host "Exit $($Process.ExitCode) - There were no recommendations selected for the analysis." -ForegroundColor Green
             Exit 0
         }
         elseif ($Process.ExitCode -eq 3010) 
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - HPIA Complete, requires Restart" –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - HPIA Complete, requires Restart" 
+            Write-Host "Exit $($Process.ExitCode) - HPIA Complete, requires Restart" -ForegroundColor Yellow
         }
         elseif ($Process.ExitCode -eq 3020) 
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - Install failed — One or more SoftPaq installations failed." –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - Install failed — One or more SoftPaq installations failed." 
+            Write-Host "Exit $($Process.ExitCode) - Install failed — One or more SoftPaq installations failed." -ForegroundColor Yellow
         }
         elseif ($Process.ExitCode -eq 4096) 
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - This platform is not supported!" –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - This platform is not supported!" 
-            throw
-        }
-        elseif ($Process.ExitCode -eq 16386) 
-        {
-            CMTraceLog –Message "Exit $($Process.ExitCode) - This platform is not supported!" –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - The reference file is not supported on platforms running the Windows 10 operating system!" 
-            throw
-        }
-        elseif ($Process.ExitCode -eq 16385) 
-        {
-            CMTraceLog –Message "Exit $($Process.ExitCode) - This platform is not supported!" –Component "Update" –Type 2
-            Write-Output "Exit $($Process.ExitCode) - The reference file is invalid" 
+            Write-Host "Exit $($Process.ExitCode) - This platform is not supported!" -ForegroundColor Yellow
             throw
         }
         Else
         {
             CMTraceLog –Message "Process exited with code $($Process.ExitCode). Expecting 0." –Component "Update" –Type 3
-            Write-Output "Process exited with code $($Process.ExitCode). Expecting 0." 
+            Write-Host "Process exited with code $($Process.ExitCode). Expecting 0." -ForegroundColor Yellow
             throw
         }
     }
     catch 
     {
         CMTraceLog –Message "Failed to start the HPImageAssistant.exe: $($_.Exception.Message)" –Component "Update" –Type 3
-        Write-Output "Failed to start the HPImageAssistant.exe: $($_.Exception.Message)" 
+        Write-Host "Failed to start the HPImageAssistant.exe: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
 
@@ -306,7 +301,7 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                 
                 if ($Category -eq "BIOS" -or $Category -eq "All"){
                     CMTraceLog –Message "Checking BIOS Recommendations" –Component "Report"
-                    Write-Output "Checking BIOS Recommendations"  
+                    Write-Host "Checking BIOS Recommendations" -ForegroundColor Green 
                     $null = $Recommendation
                     $Recommendation = $xml.HPIA.Recommendations.BIOS.Recommendation
                     If ($Recommendation)
@@ -317,23 +312,23 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                         $DownloadURL = "https://" + $Recommendation.Solution.Softpaq.Url
                         $SoftpaqFileName = $DownloadURL.Split('/')[-1]
                         CMTraceLog –Message "Component: $ItemName" –Component "Report"
-                        Write-Output "Component: $ItemName"                            
+                        Write-Host "Component: $ItemName" -ForegroundColor Gray                           
                         CMTraceLog –Message " Current version is $CurrentBIOSVersion" –Component "Report"
-                        Write-Output " Current version is $CurrentBIOSVersion" 
+                        Write-Host " Current version is $CurrentBIOSVersion" -ForegroundColor Gray
                         CMTraceLog –Message " Recommended version is $ReferenceBIOSVersion" –Component "Report"
-                        Write-Output " Recommended version is $ReferenceBIOSVersion" 
+                        Write-Host " Recommended version is $ReferenceBIOSVersion" -ForegroundColor Gray
                         CMTraceLog –Message " Softpaq download URL is $DownloadURL" –Component "Report"
-                        Write-Output " Softpaq download URL is $DownloadURL" 
+                        Write-Host " Softpaq download URL is $DownloadURL" -ForegroundColor Gray
                     }
                     Else  
                     {
                         CMTraceLog –Message "No BIOS recommendation in the XML report" –Component "Report" –Type 2
-                        Write-Output "No BIOS recommendation in XML" 
+                        Write-Host "No BIOS recommendation in XML" -ForegroundColor Gray
                     }
                 }
                 if ($Category -eq "drivers" -or $Category -eq "All"){
                     CMTraceLog –Message "Checking Driver Recommendations" –Component "Report"
-                    Write-Output "Checking Driver Recommendations"                 
+                    Write-Host "Checking Driver Recommendations" -ForegroundColor Green                
                     $null = $Recommendation
                     $Recommendation = $xml.HPIA.Recommendations.drivers.Recommendation
                     If ($Recommendation){
@@ -344,24 +339,24 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                             $DownloadURL = "https://" + $item.Solution.Softpaq.Url
                             $SoftpaqFileName = $DownloadURL.Split('/')[-1]
                             CMTraceLog –Message "Component: $ItemName" –Component "Report"
-                            Write-Output "Component: $ItemName"                            
+                            Write-Host "Component: $ItemName" -ForegroundColor Gray                           
                             CMTraceLog –Message " Current version is $CurrentBIOSVersion" –Component "Report"
-                            Write-Output " Current version is $CurrentBIOSVersion" 
+                            Write-Host " Current version is $CurrentBIOSVersion" -ForegroundColor Gray
                             CMTraceLog –Message " Recommended version is $ReferenceBIOSVersion" –Component "Report"
-                            Write-Output " Recommended version is $ReferenceBIOSVersion" 
+                            Write-Host " Recommended version is $ReferenceBIOSVersion" -ForegroundColor Gray
                             CMTraceLog –Message " Softpaq download URL is $DownloadURL" –Component "Report"
-                            Write-Output " Softpaq download URL is $DownloadURL" 
+                            Write-Host " Softpaq download URL is $DownloadURL" -ForegroundColor Gray
                             }
                         }
                     Else  
                         {
                         CMTraceLog –Message "No Driver recommendation in the XML report" –Component "Report" –Type 2
-                        Write-Output "No Driver recommendation in XML" 
+                        Write-Host "No Driver recommendation in XML" -ForegroundColor Gray
                         }
                     }
                  if ($Category -eq "Software" -or $Category -eq "All"){
                     CMTraceLog –Message "Checking Software Recommendations" –Component "Report"
-                    Write-Output "Checking Software Recommendations"  
+                    Write-Host "Checking Software Recommendations" -ForegroundColor Green 
                     $null = $Recommendation
                     $Recommendation = $xml.HPIA.Recommendations.software.Recommendation
                     If ($Recommendation){
@@ -372,19 +367,19 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
                             $DownloadURL = "https://" + $item.Solution.Softpaq.Url
                             $SoftpaqFileName = $DownloadURL.Split('/')[-1]
                             CMTraceLog –Message "Component: $ItemName" –Component "Report"
-                            Write-Output "Component: $ItemName"                            
+                            Write-Host "Component: $ItemName" -ForegroundColor Gray                           
                             CMTraceLog –Message "Current version is $CurrentBIOSVersion" –Component "Report"
-                            Write-Output " Current version is $CurrentBIOSVersion" 
+                            Write-Host " Current version is $CurrentBIOSVersion" -ForegroundColor Gray
                             CMTraceLog –Message "Recommended version is $ReferenceBIOSVersion" –Component "Report"
-                            Write-Output " Recommended version is $ReferenceBIOSVersion" 
+                            Write-Host " Recommended version is $ReferenceBIOSVersion" -ForegroundColor Gray
                             CMTraceLog –Message "Softpaq download URL is $DownloadURL" –Component "Report"
-                            Write-Output " Softpaq download URL is $DownloadURL" 
+                            Write-Host " Softpaq download URL is $DownloadURL" -ForegroundColor Gray
                         }
                     }
                     Else  
                         {
                         CMTraceLog –Message "No Software recommendation in the XML report" –Component "Report" –Type 2
-                        Write-Output "No Software recommendation in XML" 
+                        Write-Host "No Software recommendation in XML" -ForegroundColor Gray
                         }
                 }
             }
@@ -409,36 +404,36 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
         $JSONFile = Get-ChildItem –Path $ReportsFolder –Recurse –Include *.JSON –ErrorAction Stop
         If ($JSONFile)
         {
-            Write-Output "Reporting Full HPIA Results" 
+            Write-Host "Reporting Full HPIA Results" -ForegroundColor Green
             CMTraceLog –Message "JSON located at $($JSONFile.FullName)" –Component "Report"
             try 
             {
             $JSON = Get-Content –Path $JSONFile.FullName  –ErrorAction Stop | ConvertFrom-Json
             CMTraceLog –Message "HPIAOpertaion: $($JSON.HPIA.HPIAOperation)" –Component "Report"
-            Write-Output " HPIAOpertaion: $($JSON.HPIA.HPIAOperation)" 
+            Write-Host " HPIAOpertaion: $($JSON.HPIA.HPIAOperation)" -ForegroundColor Gray
             CMTraceLog –Message "ExitCode: $($JSON.HPIA.ExitCode)" –Component "Report"
-            Write-Output " ExitCode: $($JSON.HPIA.ExitCode)" 
+            Write-Host " ExitCode: $($JSON.HPIA.ExitCode)" -ForegroundColor Gray
             CMTraceLog –Message "LastOperation: $($JSON.HPIA.LastOperation)" –Component "Report"
-            Write-Output " LastOperation: $($JSON.HPIA.LastOperation)" 
+            Write-Host " LastOperation: $($JSON.HPIA.LastOperation)" -ForegroundColor Gray
             CMTraceLog –Message "LastOperationStatus: $($JSON.HPIA.LastOperationStatus)" –Component "Report"
-            Write-Output " LastOperationStatus: $($JSON.HPIA.LastOperationStatus)" 
+            Write-Host " LastOperationStatus: $($JSON.HPIA.LastOperationStatus)" -ForegroundColor Gray
             $Recommendations = $JSON.HPIA.Recommendations
             if ($Recommendations) {
-                Write-Output "HPIA Item Results" 
+                Write-Host "HPIA Item Results" -ForegroundColor Green
                 foreach ($item in $Recommendations){
                     $ItemName = $Item.Name
                     $ItemRecommendationValue = $Item.RecommendationValue
                     $ItemSoftPaqID = $Item.SoftPaqID
                     CMTraceLog –Message " $ItemName $ItemRecommendationValue | $ItemSoftPaqID" –Component "Report"
-                    Write-Output " $ItemName $ItemRecommendationValue | $ItemSoftPaqID" 
+                    Write-Host " $ItemName $ItemRecommendationValue | $ItemSoftPaqID" -ForegroundColor Gray
                     CMTraceLog –Message "  URL: $($Item.ReleaseNotesUrl)" –Component "Report"
-                    Write-Output "  URL: $($Item.ReleaseNotesUrl)" 
+                    write-host "  URL: $($Item.ReleaseNotesUrl)" -ForegroundColor Gray
                     CMTraceLog –Message "  Status: $($item.Remediation.Status)" –Component "Report"
-                    Write-Output "  Status: $($item.Remediation.Status)" 
+                    Write-Host "  Status: $($item.Remediation.Status)" -ForegroundColor Gray
                     CMTraceLog –Message "  ReturnCode: $($item.Remediation.ReturnCode)" –Component "Report"
-                    Write-Output "  ReturnCode: $($item.Remediation.ReturnCode)" 
+                    Write-Host "  ReturnCode: $($item.Remediation.ReturnCode)" -ForegroundColor Gray
                     CMTraceLog –Message "  ReturnDescription: $($item.Remediation.ReturnDescription)" –Component "Report"
-                    Write-Output "  ReturnDescription: $($item.Remediation.ReturnDescription)" 
+                    Write-Host "  ReturnDescription: $($item.Remediation.ReturnDescription)" -ForegroundColor Gray
                     }
                 }
             }
@@ -453,5 +448,25 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     }
 }
 
+$Manufacturer = (Get-WmiObject -Class:Win32_ComputerSystem).Manufacturer
+$ManufacturerBaseBoard = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Manufacturer
+$ComputerModel = (Get-WmiObject -Class:Win32_ComputerSystem).Model
+if ($ManufacturerBaseBoard -eq "Intel Corporation")
+    {
+    $ComputerModel = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product
+    }
+$HPProdCode = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product
+$CurrentOSInfo = Get-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+$InstallDate_CurrentOS = Convert-FromUnixDate $CurrentOSInfo.GetValue('InstallDate')
+$WindowsRelease = $CurrentOSInfo.GetValue('ReleaseId')
+if ($ReleaseID_CurrentOS -eq "2009"){$WindowsRelease = $CurrentOSInfo.GetValue('DisplayVersion')}
+$BuildUBR_CurrentOS = $($CurrentOSInfo.GetValue('CurrentBuild'))+"."+$($CurrentOSInfo.GetValue('UBR'))
+
+# Write Information
+Write-Output "Computer Name: $env:computername"
+Write-Output "Windows $WindowsRelease | $BuildUBR_CurrentOS | Installed: $InstallDate_CurrentOS"
+Write-Output "Computer Model: $ComputerModel"
+if ($Manufacturer -like "H*"){Write-Output "Computer Product Code: $HPProdCode"}
+Write-Output "Current BIOS Level: $($BIOSInfo.SMBIOSBIOSVersion) From Date: $CurrentBIOSDate"
 if ($DebugLog -eq "FALSE") {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action}
 else {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action -DebugLog}
