@@ -453,6 +453,9 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
     CMTraceLog –Message "NO JSON report." –Component "Report" –Type 1
     }
 }
+Function Convert-FromUnixDate ($UnixDate) {
+    [timezone]::CurrentTimeZone.ToLocalTime(([datetime]'1/1/1970').AddSeconds($UnixDate))
+}
 
 $BIOSInfo = Get-WmiObject -Class 'Win32_Bios'
 $Manufacturer = (Get-WmiObject -Class:Win32_ComputerSystem).Manufacturer
