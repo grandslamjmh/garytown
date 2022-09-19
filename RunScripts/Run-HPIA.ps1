@@ -458,6 +458,10 @@ Function Convert-FromUnixDate ($UnixDate) {
 }
 
 $BIOSInfo = Get-WmiObject -Class 'Win32_Bios'
+
+# Get the current BIOS release date and format it to datetime
+$CurrentBIOSDate = [System.Management.ManagementDateTimeConverter]::ToDatetime($BIOSInfo.ReleaseDate).ToUniversalTime()
+
 $Manufacturer = (Get-WmiObject -Class:Win32_ComputerSystem).Manufacturer
 $ManufacturerBaseBoard = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Manufacturer
 $ComputerModel = (Get-WmiObject -Class:Win32_ComputerSystem).Model
@@ -475,11 +479,17 @@ $BuildUBR_CurrentOS = $($CurrentOSInfo.GetValue('CurrentBuild'))+"."+$($CurrentO
 # Write Information
 Write-Output "Computer Name: $env:computername"
 Write-Output "Windows $WindowsRelease | $BuildUBR_CurrentOS | Installed: $InstallDate_CurrentOS"
-Write-Output "Computer Model: $ComputerModel"
-if ($Manufacturer -like "H*"){Write-Output "Computer Product Code: $HPProdCode"}
-Write-Output "Current BIOS Level: $($BIOSInfo.SMBIOSBIOSVersion) From Date: $CurrentBIOSDate"
-if ($DebugLog -eq "FALSE") {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action}
-else {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action -DebugLog}
 
-if ($script:RebootRequired -eq $true){Write-Output "!!!!! ----- REBOOT REQUIRED ----- !!!!!"}
-else {Write-Output "Success, No Reboot"}
+if ($Manufacturer -like "H*"){Write-Output "Computer Model: $ComputerModel | Platform: $HPProdCode"}
+else {Write-Output "Computer Model: $ComputerModel"}
+
+Write-Output "Current BIOS Level: $($BIOSInfo.SMBIOSBIOSVersion) From Date: $CurrentBIOSDate"
+if ($Manufacturer -like "H*"){
+    if ($DebugLog -eq "FALSE") {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action}
+    else {Run-HPIA -Operation Analyze -Category $Category -Selection $Selection -Action $Action -DebugLog}
+
+    if ($script:RebootRequired -eq $true){Write-Output "!!!!! ----- REBOOT REQUIRED ----- !!!!!"}
+    else {Write-Output "Success, No Reboot"}
+}
+else { Write-Output "Not Running HPIA - Not HP Device"}
+    
