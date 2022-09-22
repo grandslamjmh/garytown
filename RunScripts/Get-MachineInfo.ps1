@@ -170,6 +170,12 @@ $HPProdCode = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard)
 
 
 Write-Output "Computer Name: $env:computername"
+$CurrentOSInfo = Get-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+$InstallDate_CurrentOS = Convert-FromUnixDate $CurrentOSInfo.GetValue('InstallDate')
+$WindowsRelease = $CurrentOSInfo.GetValue('ReleaseId')
+if ($WindowsRelease -eq "2009"){$WindowsRelease = $CurrentOSInfo.GetValue('DisplayVersion')}
+$BuildUBR_CurrentOS = $($CurrentOSInfo.GetValue('CurrentBuild'))+"."+$($CurrentOSInfo.GetValue('UBR'))
+Write-Output "Windows $WindowsRelease | $BuildUBR_CurrentOS | Installed: $InstallDate_CurrentOS"
 $LastReboot = (Get-CimInstance -ClassName win32_operatingsystem).lastbootuptime
 if ($LastReboot)
     {
