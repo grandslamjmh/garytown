@@ -9,6 +9,9 @@ I'm using it as a Run Script to get information from devices over CMG, as I can'
 
 
 #>
+Function Convert-FromUnixDate ($UnixDate) {
+    [timezone]::CurrentTimeZone.ToLocalTime(([datetime]'1/1/1970').AddSeconds($UnixDate))
+}
 Function Test-PendingReboot {
     #Pending Reboot From Adam, and I added the part for ConfigMgr
     #https://adamtheautomator.com/pending-reboot-registry/
