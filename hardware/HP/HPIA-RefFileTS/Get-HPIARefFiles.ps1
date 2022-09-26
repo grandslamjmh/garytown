@@ -529,8 +529,8 @@ Set-Location -Path $ReferenceFileLocation
 foreach ($Platform in $ModelsTable.Platform){
     $Model = ($ModelsTable | Where-Object {$_.Platform -eq $Platform}).Model
    foreach ($OS in $OSTable.OS){
-        Write-Host "-- $Model | $OS | $OSVer --" -ForegroundColor Cyan
         $OSVer = ($OSTable | Where-Object {$_.OS -eq $OS}).osver
+	Write-Host "-- $Model | $OS | $OSVer --" -ForegroundColor Cyan
         Set-ReferenceFileSoftpaq -Platform $Platform -OS $OS -OSVer $OSVer -CacheDir $CacheDir 
    }
 }
