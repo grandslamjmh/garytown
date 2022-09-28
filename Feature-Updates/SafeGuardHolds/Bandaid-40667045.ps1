@@ -5,6 +5,7 @@ I also know this isn't the long term fix... I'd assume the bright minds at MS ar
 
 This is purely for testing to see if you can upgrade Win11 on a test machine that has the Safe Guard Hold ID of 40667045
 
+Note, I ONLY tested on 1 device, pretty sure SecurityServiceConfigured Option 3 = System Guard | When I was enabling and disabling it, 3 was the value that changed.
 
 #>
 
