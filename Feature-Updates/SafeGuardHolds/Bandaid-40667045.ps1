@@ -7,6 +7,11 @@ This is purely for testing to see if you can upgrade Win11 on a test machine tha
 
 Note, I ONLY tested on 1 device, pretty sure SecurityServiceConfigured Option 3 = System Guard | When I was enabling and disabling it, 3 was the value that changed.
 
+
+Current SafeGuards:
+40667045 - Secure Launch data not migrated on IceLake(Client), TigerLake, AlderLake devices (Wu Offer Block)
+41332279 - Devices with printer using Microsoft IPP Class Driver (Wu Offer Block)
+
 #>
 
 
@@ -68,12 +73,13 @@ if ($SafeGuardID -eq "40667045"){
 if ($SafeGuardID -eq "41332279"){
     
     # Devices with printer using Microsoft IPP Class Driver (Wu Offer Block)
-    <#Working on Method currently to detect the driver, then uninstall... need more test machines...
+    
+    # Working on Method currently to detect the driver, then uninstall... need more test machines...
     $InstalledDrivers = Get-WmiObject Win32_PnpSignedDriver
-    $IPPPrinter = $InstalledDrivers.DeviceName | Where-Object {$_ -match 'IPP'}
-    $InfName = $IPPPrinter.InfNameIPPPrinter
+    $IPPPrinter = $InstalledDrivers | Where-Object {$_.DeviceName -match 'Microsoft IPP Class Driver'}
+    $InfName = $IPPPrinter.InfName
     pnputil /delete-driver $InfName /uninstall /force
-    #>
+    
     #Trigger Appraiser
 
     $TaskName = "Microsoft Compatibility Appraiser"
@@ -90,6 +96,6 @@ if ($SafeGuardID -eq "41332279"){
 
     $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
     if ($SafeGuardIDConfirm -eq "None"){
-        Write-Output "Cleared SafeGuard ID... until System Guard is enabled again, probably by policy... this is a BANDAID, not a long term fix"
+        Write-Output "Cleared SafeGuard ID 41332279... Microsoft IPP Class Driver should auto reinstall during the windows upgrade."
     }
 }
