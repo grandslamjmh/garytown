@@ -14,7 +14,7 @@ Note, I ONLY tested on 1 device, pretty sure SecurityServiceConfigured Option 3 
 $SafeGuardID = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
 
 if ($SafeGuardID -eq "40667045"){
-    
+    #Secure Launch data not migrated on IceLake(Client), TigerLake, AlderLake devices (Wu Offer Block)
     #DeviceGuard info: https://www.tenforums.com/tutorials/68926-verify-if-device-guard-enabled-disabled-windows-10-a.html
     $DeviceGuard = Get-CimInstance –ClassName Win32_DeviceGuard –Namespace root\Microsoft\Windows\DeviceGuard
     if ($DeviceGuard.SecurityServicesConfigured -contains 3){
@@ -44,6 +44,36 @@ if ($SafeGuardID -eq "40667045"){
         Write-Output "System Guard not Configured"
         }
 
+    #Trigger Appraiser
+
+    $TaskName = "Microsoft Compatibility Appraiser"
+    $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($Task -ne $null){
+        Write-Output "Triggering Task $($Task.TaskName)"
+        Start-ScheduledTask -InputObject $Task
+    }
+    else {
+        Write-Output "No Task found with name: $TaskName"
+    }
+
+    Start-Sleep -Seconds 60
+
+    $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
+    if ($SafeGuardIDConfirm -eq "None"){
+        Write-Output "Cleared SafeGuard ID... until System Guard is enabled again, probably by policy... this is a BANDAID, not a long term fix"
+    }
+}
+
+
+if ($SafeGuardID -eq "41332279"){
+    
+    # Devices with printer using Microsoft IPP Class Driver (Wu Offer Block)
+    <#Working on Method currently to detect the driver, then uninstall... need more test machines...
+    $InstalledDrivers = Get-WmiObject Win32_PnpSignedDriver
+    $IPPPrinter = $InstalledDrivers.DeviceName | Where-Object {$_ -match 'IPP'}
+    $InfName = $IPPPrinter.InfNameIPPPrinter
+    pnputil /delete-driver $InfName /uninstall /force
+    #>
     #Trigger Appraiser
 
     $TaskName = "Microsoft Compatibility Appraiser"
