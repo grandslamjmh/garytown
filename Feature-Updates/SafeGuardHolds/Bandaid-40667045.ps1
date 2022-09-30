@@ -18,22 +18,38 @@ Current SafeGuards:
 #Get SafeGuardID
 #$SafeGuardID = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
 
-$Compliance = 'No SafeGuard Holds'
-$UX = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators"
-foreach ($U in $UX){
-    $GatedBlockId = $U.GetValue('GatedBlockId')
-    if ($GatedBlockId){
-        if ($GatedBlockId -ne "None"){
-        $Compliance = $GatedBlockId
-        $SafeGuardID  = $GatedBlockId
-        #$Key = $U.PSChildName
-        #$Compliance = "$GatedBlockId | $Key"
-        if (!(Test-Path -Path $InventoryRegPath)){New-Item -Path $InventoryRegPath -Force | Out-Null}
-        if (Test-Path -Path $InventoryRegPath){
-                New-ItemProperty -Path $InventoryRegPath -Name $InventoryPropName -PropertyType string -Value $Compliance -Force | Out-Null}
-        }         
+
+function Get-SafeGuardHoldID {
+    $UX = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators"
+    foreach ($U in $UX){
+        $GatedBlockId = $U.GetValue('GatedBlockId')
+        if ($GatedBlockId){
+            if ($GatedBlockId -ne "None"){
+                $SafeGuardID  = $GatedBlockId
+            }             
+        }
     }
+if (!($SafeGuardID)){$SafeGuardID = "NONE"}
+return $SafeGuardID
 }
+
+function Run-Appraiser{
+
+    #Trigger Appraiser
+
+    $TaskName = "Microsoft Compatibility Appraiser"
+    $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($Task -ne $null){
+        Write-Output "Triggering Task $($Task.TaskName)"
+        Start-ScheduledTask -InputObject $Task
+        Start-Sleep -Seconds 60
+    }
+    else {
+        Write-Output "No Task found with name: $TaskName"
+    }
+
+}
+
 
 Write-Output "Safe Guard Holds: $Compliance"
 
@@ -69,21 +85,14 @@ if ($SafeGuardID -match "40667045"){
         }
 
     #Trigger Appraiser
+    Run-Appraiser
+    
 
-    $TaskName = "Microsoft Compatibility Appraiser"
-    $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if ($Task -ne $null){
-        Write-Output "Triggering Task $($Task.TaskName)"
-        Start-ScheduledTask -InputObject $Task
+    $SafeGuardIDConfirm = Get-SafeGuardHoldID
+    if ($SafeGuardIDConfirm -match "40667045"){
+        Write-Output "Failed to Clear SafeGuard Hold... must be something else, gotta keep trying, let me know if you figure it out and Ill update this script."
     }
     else {
-        Write-Output "No Task found with name: $TaskName"
-    }
-
-    Start-Sleep -Seconds 60
-
-    $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
-    if ($SafeGuardIDConfirm -notmatch "40667045"){
         Write-Output "Cleared SafeGuard ID... until System Guard is enabled again, probably by policy... this is a BANDAID, not a long term fix"
     }
 }
@@ -100,21 +109,14 @@ if ($SafeGuardID -match "41332279"){
     pnputil /delete-driver $InfName /uninstall /force
     
     #Trigger Appraiser
+    Run-Appraiser
 
-    $TaskName = "Microsoft Compatibility Appraiser"
-    $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if ($Task -ne $null){
-        Write-Output "Triggering Task $($Task.TaskName)"
-        Start-ScheduledTask -InputObject $Task
+
+    $SafeGuardIDConfirm = Get-SafeGuardHoldID
+    if ($SafeGuardIDConfirm -match "41332279"){
+        Write-Output "Failed to remove SafeGuard ID 41332279... No idea why, if you figure it out, let me know"
     }
     else {
-        Write-Output "No Task found with name: $TaskName"
-    }
-
-    Start-Sleep -Seconds 60
-
-    $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
-    if ($SafeGuardIDConfirm -notmatch "41332279"){
         Write-Output "Cleared SafeGuard ID 41332279... Microsoft IPP Class Driver should auto reinstall during the windows upgrade."
     }
 }
