@@ -50,8 +50,9 @@ function Run-Appraiser{
 
 }
 
+$SafeGuardID = Get-SafeGuardHoldID
 
-Write-Output "Safe Guard Holds: $Compliance"
+Write-Output "Safe Guard Holds: $SafeGuardID"
 
 if ($SafeGuardID -match "40667045"){
     #Secure Launch data not migrated on IceLake(Client), TigerLake, AlderLake devices (Wu Offer Block)
