@@ -16,9 +16,28 @@ Current SafeGuards:
 
 
 #Get SafeGuardID
-$SafeGuardID = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
+#$SafeGuardID = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
 
-if ($SafeGuardID -eq "40667045"){
+$Compliance = 'No SafeGuard Holds'
+$UX = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators"
+foreach ($U in $UX){
+    $GatedBlockId = $U.GetValue('GatedBlockId')
+    if ($GatedBlockId){
+        if ($GatedBlockId -ne "None"){
+        $Compliance = $GatedBlockId
+        $SafeGuardID  = $GatedBlockId
+        #$Key = $U.PSChildName
+        #$Compliance = "$GatedBlockId | $Key"
+        if (!(Test-Path -Path $InventoryRegPath)){New-Item -Path $InventoryRegPath -Force | Out-Null}
+        if (Test-Path -Path $InventoryRegPath){
+                New-ItemProperty -Path $InventoryRegPath -Name $InventoryPropName -PropertyType string -Value $Compliance -Force | Out-Null}
+        }         
+    }
+}
+
+Write-Output "Safe Guard Holds: $Compliance"
+
+if ($SafeGuardID -match "40667045"){
     #Secure Launch data not migrated on IceLake(Client), TigerLake, AlderLake devices (Wu Offer Block)
     #DeviceGuard info: https://www.tenforums.com/tutorials/68926-verify-if-device-guard-enabled-disabled-windows-10-a.html
     $DeviceGuard = Get-CimInstance –ClassName Win32_DeviceGuard –Namespace root\Microsoft\Windows\DeviceGuard
@@ -64,13 +83,13 @@ if ($SafeGuardID -eq "40667045"){
     Start-Sleep -Seconds 60
 
     $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
-    if ($SafeGuardIDConfirm -eq "None"){
+    if ($SafeGuardIDConfirm -notmatch "40667045"){
         Write-Output "Cleared SafeGuard ID... until System Guard is enabled again, probably by policy... this is a BANDAID, not a long term fix"
     }
 }
 
 
-if ($SafeGuardID -eq "41332279"){
+if ($SafeGuardID -match "41332279"){
     
     # Devices with printer using Microsoft IPP Class Driver (Wu Offer Block)
     
@@ -95,7 +114,7 @@ if ($SafeGuardID -eq "41332279"){
     Start-Sleep -Seconds 60
 
     $SafeGuardIDConfirm = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\NI22H2" -Name GatedBlockId
-    if ($SafeGuardIDConfirm -eq "None"){
+    if ($SafeGuardIDConfirm -notmatch "41332279"){
         Write-Output "Cleared SafeGuard ID 41332279... Microsoft IPP Class Driver should auto reinstall during the windows upgrade."
     }
 }
