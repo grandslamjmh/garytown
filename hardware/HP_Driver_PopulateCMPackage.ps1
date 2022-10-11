@@ -69,9 +69,16 @@ foreach ($Model in $HPModelsTable) #{Write-Host "$($Model.Name)"}
     $DriverInfo = $null
     $Prodcode = $Model.Language
     $Name = $Model.MIFFilename
-    $MaxBuild = ((Get-HPDeviceDetails -platform $Prodcode -oslist | Where-Object {$_.OperatingSystem -eq "Microsoft Windows 10"}).OperatingSystemRelease | measure -Maximum).Maximum
+    #Windows 10
+    $MaxBuild = ((Get-HPDeviceDetails -platform $Prodcode -oslist | Where-Object {$_.OperatingSystem -eq "Microsoft Windows 10"}).BuildNumber | measure -Maximum).Maximum
+    #Windows 11
+    #$MaxBuild = ((Get-HPDeviceDetails -platform $Prodcode -oslist | Where-Object {$_.OperatingSystem -eq "Microsoft Windows 11"}).BuildNumber | measure -Maximum).Maximum
+
+    $OSVer = ((Get-HPDeviceDetails -platform $Prodcode -oslist | Where-Object {$_.BuildNumber -eq "$MaxBuild"})).OperatingSystemRelease
+
     $SupportedOSBuilds = (Get-HPDeviceDetails -platform $Prodcode -OSList).OperatingSystemRelease | Sort-Object -Descending
-    $DriverInfo = Get-SoftpaqList -Platform $Prodcode -Category Driverpack -OsVer $MaxBuild -Os Win10
+    
+    $DriverInfo = Get-SoftpaqList -Platform $Prodcode -Category Driverpack -OsVer $OSVer -Os Win10
     
     if (!($DriverInfo))
         {
@@ -82,11 +89,11 @@ foreach ($Model in $HPModelsTable) #{Write-Host "$($Model.Name)"}
             $DriverInfo = Get-SoftpaqList -Platform $Prodcode -Category Driverpack -OsVer $($SupportedOSBuilds[$loop_index]) -Os Win10
             }
         while ($DriverInfo -eq $null)
-        write-host "Latest Driver Package for Windows Build:$($SupportedOSBuilds[$loop_index]) but max supported build: $MaxBuild" -ForegroundColor Yellow
+        write-host "Latest Driver Package for Windows Build:$($SupportedOSBuilds[$loop_index]) but max supported build: $OSVer" -ForegroundColor Yellow
         }
     else
         {
-        write-host " Latest Supported Build & Driver Package for Windows Build: $MaxBuild" -ForegroundColor Gray
+        write-host " Latest Supported Build & Driver Package for Windows Build: $OSVer" -ForegroundColor Gray
         }
     $DriverInfo = $DriverInfo | Where-Object {$_.Name -notmatch "Windows PE"}
     if ($DriverInfo.Count -gt 1)
