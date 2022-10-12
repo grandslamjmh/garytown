@@ -34,7 +34,8 @@ Chamges:
         [Parameter(Mandatory=$false)]
         $ReportsFolder = "$env:systemdrive\ProgramData\HP\HPIA",
         [Parameter(Mandatory=$false)]
-        [Switch]$DebugLog = $false
+        [Switch]$DebugLog = $false,
+        [Switch]$RebootIfNeeded = $false
         )
 
     # Params
@@ -227,6 +228,7 @@ Chamges:
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - HPIA Complete, requires Restart" –Component "Update" –Type 2
             Write-Host "Exit $($Process.ExitCode) - HPIA Complete, requires Restart" -ForegroundColor Yellow
+            $script:RebootRequired = $true
         }
         elseif ($Process.ExitCode -eq 3020) 
         {
@@ -287,6 +289,7 @@ Chamges:
                         Write-Host " Recommended version is $ReferenceBIOSVersion" -ForegroundColor Gray
                         CMTraceLog –Message " Softpaq download URL is $DownloadURL" –Component "Report"
                         Write-Host " Softpaq download URL is $DownloadURL" -ForegroundColor Gray
+                        $Script:BIOSReboot = $true
                     }
                     Else  
                     {
@@ -413,5 +416,17 @@ Chamges:
     catch
     {
     CMTraceLog –Message "NO JSON report." –Component "Report" –Type 1
+    }
+
+    if ($Script:BIOSReboot -eq $true){
+        try {
+            Get-BitLockerVolume | Where-Object {$_.ProtectionStatus -eq "On"} | Suspend-BitLocker
+        }
+        catch{}
+        }
+    if ($script:RebootRequired ){
+        if ($RebootIfNeeded) {
+            Restart-Computer -Force
+        }
     }
 }
