@@ -13,6 +13,9 @@ Critical – For major bug fixes, specific problem resolutions, to enable new OS
 
 Chamges: 
 22.06.09 - Added Debug Parameter (DebugLog) for HPIA.  Log goes to the Report Folder.
+22.10.11 - Added Reboot Parameter
+22.10.12 - Added Logic to suspend Bitlocker if BIOS Updated
+22.10.13 - Added additional Exit Codes
 #>
 
 [CmdletBinding()]
@@ -239,6 +242,36 @@ Chamges:
         {
             CMTraceLog –Message "Exit $($Process.ExitCode) - This platform is not supported!" –Component "Update" –Type 2
             Write-Host "Exit $($Process.ExitCode) - This platform is not supported!" -ForegroundColor Yellow
+            throw
+        }
+        elseif ($Process.ExitCode -eq 16386) 
+        {
+            CMTraceLog –Message "Exit $($Process.ExitCode) - This platform is not supported!" –Component "Update" –Type 2
+            Write-Output "Exit $($Process.ExitCode) - The reference file is not supported on platforms running the Windows 10 operating system!" 
+            throw
+        }
+        elseif ($Process.ExitCode -eq 16385) 
+        {
+            CMTraceLog –Message "Exit $($Process.ExitCode) - The reference file is invalid" –Component "Update" –Type 2
+            Write-Output "Exit $($Process.ExitCode) - The reference file is invalid" 
+            throw
+        }
+        elseif ($Process.ExitCode -eq 16387) 
+        {
+            CMTraceLog –Message "Exit $($Process.ExitCode) - The reference file given explicitly on the command line does not match the target System ID or OS version." –Component "Update" –Type 2
+            Write-Output "Exit $($Process.ExitCode) - The reference file given explicitly on the command line does not match the target System ID or OS version." 
+            throw
+        }
+        elseif ($Process.ExitCode -eq 16388) 
+        {
+            CMTraceLog –Message "Exit $($Process.ExitCode) - HPIA encountered an error processing the reference file provided on the command line." –Component "Update" –Type 2
+            Write-Output "Exit $($Process.ExitCode) - HPIA encountered an error processing the reference file provided on the command line." 
+            throw
+        }
+        elseif ($Process.ExitCode -eq 16389) 
+        {
+            CMTraceLog –Message "Exit $($Process.ExitCode) - HPIA could not find the reference file specified in the command line reference file parameter" –Component "Update" –Type 2
+            Write-Output "Exit $($Process.ExitCode) - HPIA could not find the reference file specified in the command line reference file parameter" 
             throw
         }
         Else
