@@ -164,7 +164,7 @@ select SMS_G_System_BASEBOARD.Product FROM SMS_G_System_BASEBOARD
 LEFT JOIN SMS_G_System_COMPUTER_SYSTEM ON SMS_G_System_COMPUTER_SYSTEM.ResourceID = SMS_G_System_BASEBOARD.ResourceID
 where SMS_G_System_COMPUTER_SYSTEM.Model = "$model"
 "@
-        $ProductID = (Get-WmiObject -ComputerName $ProviderMachineName -Namespace "ROOT\SMS\site_$SiteCode" -Query $query).Product
+        $ProductID = (Get-WmiObject -ComputerName $ProviderMachineName -Namespace "ROOT\SMS\site_$SiteCode" -Query $query).Product | Select-Object -Last 1
         }
          
         #Take the Items and place in PS Object    
