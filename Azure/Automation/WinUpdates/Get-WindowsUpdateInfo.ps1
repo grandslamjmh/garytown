@@ -1019,7 +1019,8 @@ Function New-MSDefenderDefsTable {
                     $Row = $MSDefenderDefsTable.NewRow()
                     "Version","Engine Version","Platform Version","Released" | ForEach-Object {
                         if ($cells[$t] -match "dateofrelease"){
-                            $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
+                            #$(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
+                            $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Replace("<li>Released: ","").Trim())
                             $Row["$_"] = $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
                         }
                         else {
