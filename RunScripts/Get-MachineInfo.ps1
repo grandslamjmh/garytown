@@ -9,9 +9,6 @@ I'm using it as a Run Script to get information from devices over CMG, as I can'
 
 
 #>
-Function Convert-FromUnixDate ($UnixDate) {
-    [timezone]::CurrentTimeZone.ToLocalTime(([datetime]'1/1/1970').AddSeconds($UnixDate))
-}
 Function Test-PendingReboot {
     #Pending Reboot From Adam, and I added the part for ConfigMgr
     #https://adamtheautomator.com/pending-reboot-registry/
@@ -130,6 +127,9 @@ Function Test-PendingReboot {
     }
     else {Write-Output "False"}
 }
+Function Convert-FromUnixDate ($UnixDate) {
+    [timezone]::CurrentTimeZone.ToLocalTime(([datetime]'1/1/1970').AddSeconds($UnixDate))
+}
 Function Get-TPMVer {
 
 $Manufacturer = (Get-WmiObject -Class:Win32_ComputerSystem).Manufacturer
@@ -176,7 +176,7 @@ Write-Output "Computer Name: $env:computername"
 $CurrentOSInfo = Get-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 $InstallDate_CurrentOS = Convert-FromUnixDate $CurrentOSInfo.GetValue('InstallDate')
 $WindowsRelease = $CurrentOSInfo.GetValue('ReleaseId')
-if ($WindowsRelease -eq "2009"){$WindowsRelease = $CurrentOSInfo.GetValue('DisplayVersion')}
+if ($ReleaseID_CurrentOS -eq "2009"){$WindowsRelease = $CurrentOSInfo.GetValue('DisplayVersion')}
 $BuildUBR_CurrentOS = $($CurrentOSInfo.GetValue('CurrentBuild'))+"."+$($CurrentOSInfo.GetValue('UBR'))
 Write-Output "Windows $WindowsRelease | $BuildUBR_CurrentOS | Installed: $InstallDate_CurrentOS"
 $LastReboot = (Get-CimInstance -ClassName win32_operatingsystem).lastbootuptime
@@ -240,6 +240,50 @@ Write-Output "Current Client UTC: $TimeUTC"
 Write-Output "Time Zone: $(Get-TimeZone)"
 $Locale = Get-WinSystemLocale
 if ($Locale -ne "en-US"){Write-Output "WinSystemLocale: $locale"}
+
+
+if (Test-Path -Path "C:\windows\ccm\ccmexec.exe"){
+    #----- CM Client Cache -------------#
+    $CMObject = New-Object -ComObject 'UIResource.UIResourceMgr'  
+    $CMCacheObjects = $CMObject.GetCacheInfo() 
+
+    $CMCacheSizeMB = $CMCacheObjects.TotalSize
+    $CMCacheSizePerent = [math]::Round((($CMCacheSizeMB / $DiskSize) * 100),0)
+    $CMCacheUsedMB = $CMCacheObjects.TotalSize - $CMCacheObjects.FreeSize
+    $CMCacheUsedCachePercent = [math]::Round((($CMCacheUsedMB / $CMCacheSizeMB) * 100),0)
+    $CMCacheUsedDrivePercent = [math]::Round((($CMCacheUsedMB / $DiskSize) * 100),0)
+
+    Write-Output "CMCache Info (MB): %: $CMCacheSizePerent | Max: $CMCacheSizeMB | Used: $CMCacheUsedMB | Used Cache %: $CMCacheUsedCachePercent | Used Drive %: $CMCacheUsedDrivePercent"
+    #----- Branch Cache -------------#
+    $BCStatus = Get-BCStatus -ErrorAction SilentlyContinue
+    $BCHashCache = Get-BCHashCache -ErrorAction SilentlyContinue
+    $BCDataCache = Get-BCDataCache -ErrorAction SilentlyContinue
+
+    if ($BCStatus -ne $Null)
+        {
+        $BCCacheSizeMB = [math]::Round(($BCDataCache.MaxCacheSizeAsNumberOfBytes / 1MB),0)
+        $BCCacheSizePercent = $BCDataCache.MaxCacheSizeAsPercentageOfDiskVolume
+        $BCCacheUsedMB = [math]::Round(($BCDataCache.CurrentActiveCacheSize / 1MB),0)
+        $BCCacheUsedPercent = [math]::Round((($BCCacheUsedMB / $DiskSize) * 100),0)
+
+        $BCHashSizeMB = [math]::Round(($BCHashCache.MaxCacheSizeAsNumberOfBytes / 1MB),0)
+        $BCHashSizePercent = $BCHashCache.MaxCacheSizeAsPercentageOfDiskVolume
+        $BCHashUsedMB = [math]::Round(($BCHashCache.CurrentSizeOnDiskAsNumberOfBytes / 1MB),0)
+        $BCHashUsedPercent
+
+        $BCCacheComboSizeMB = $BCCacheSizeMB + $BCHashSizeMB
+        $BCCacheComboSizePercent = $BCCacheSizePercent + $BCHashSizePercent 
+        $BCCacheComboUsedMB = $BCCacheUsedMB + $BCHashUsedMB
+        $BCCacheComboUsedCachePercent = [math]::Round((($BCCacheComboUsedMB / $BCCacheComboSizeMB) * 100),0)
+        $BCCacheComboUsedDrivePercent = [math]::Round((($BCCacheComboUsedMB / $DiskSize) * 100),0)
+                 
+
+        #Write-Host "BC Info (MB): [Hash] %:$BCHashSizePercent | Max: $BCHashSizeMB | Used: $BCHashUsedMB [Cache] %: $BCCacheSizePercent | Max: $BCCacheSizeMB | Used: $BCCacheUsedMB" -ForegroundColor Green
+        Write-Output "BC Info (MB): Max %: $BCCacheComboSizePercent | Max: $BCCacheComboSizeMB | Used: $BCCacheComboUsedMB | Used Cache %: $BCCacheComboUsedCachePercent | Used Drive %: $BCCacheComboUsedDrivePercent"
+    }
+}
+
+
 Get-WmiObject win32_LogicalDisk -Filter "DeviceID='C:'" | % { $FreeSpace = $_.FreeSpace/1GB -as [int] ; $DiskSize = $_.Size/1GB -as [int] }
 
 Write-Output "DiskSize = $DiskSize, FreeSpace = $Freespace"
@@ -284,3 +328,23 @@ if (Get-WmiObject -Class win32_battery)
         }
     if ((get-WmiObject Win32_NetworkAdapterConfiguration).defaultIPGateway -ilike '0.0.0.0')
         {Write-Output "Network Status: Device is on VPN"}
+
+$Compliance = 'None'
+$UX = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators" | Where-Object {$_.Name -notmatch "UNV"}
+foreach ($U in $UX){
+    $GatedBlockId = $U.GetValue('GatedBlockId')
+    $GatedBlockReason = $U.GetValue('GatedBlockReason')
+    $FailedPrereqs = $U.GetValue('FailedPrereqs')
+    $DestBuildNum = $U.GetValue('DestBuildNum')
+    $UpgEx = $U.GetValue('UpgEx')
+    if ($GatedBlockId){
+        if ($GatedBlockId -ne "None"){
+
+            #$Compliance = $GatedBlockId
+            $Key = $U.PSChildName
+            $Compliance = "$GatedBlockId | $GatedBlockReason | $FailedPrereqs | $DestBuildNum | $UpgEx"
+        }         
+    }
+}
+
+Write-Output "GateBlock: $Compliance"
