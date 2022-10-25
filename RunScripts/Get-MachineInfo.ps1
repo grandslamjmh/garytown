@@ -159,7 +159,7 @@ else
     else {Write-Output "TPM Verion: $((Get-CimInstance -Namespace "ROOT\cimv2\Security\MicrosoftTpm" -ClassName Win32_TPM).ManufacturerVersion) | Spec: $((Get-CimInstance -Namespace "ROOT\cimv2\Security\MicrosoftTpm" -ClassName Win32_TPM).SpecVersion)"}
     }
 }
-Function Windows11Check {
+
 <#
 Modified for OSD by @gwblok
 
@@ -724,8 +724,6 @@ Storage = $null
 }
 
 
-return $outObject
-}
 $BIOSInfo = Get-WmiObject -Class 'Win32_Bios'
 
 # Get the current BIOS release date and format it to datetime
@@ -923,7 +921,7 @@ Write-Output "GateBlock: $Compliance"
 
 #Windows 11
 Write-Output "Windows 11 Info"
-$outObject = Windows11Check
+
 
     Write-Output "Windows 11 Compatiblity: $($outObject.returnResult)"
     $Global:Readiness.Return = $outObject.returnResult
