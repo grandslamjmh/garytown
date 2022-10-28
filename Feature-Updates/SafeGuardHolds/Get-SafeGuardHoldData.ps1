@@ -20,6 +20,13 @@ Registry('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Targ
 | project Device,GatedBlockID=Value,ALTERNATEDATALINK=Value1,ALTERNATEDATAVERSION=Value2
 #>
 
+
+<# Updates
+22.10.28 - Added more rows to the Lookup.
+
+
+
+#>
 $Path = 'C:\Temp'
 
 function Get-ClientSafeguardHoldInfo {
@@ -145,43 +152,51 @@ function Get-SafeGuardHoldDetails {
 
 
 $SettingsTable = @(
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_14_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2397'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_28_04_03_AMD64.cab'; ALTERNATEDATAVERSION = '2464'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_17_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2395'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_02_12_02_03_AMD64.cab'; ALTERNATEDATAVERSION = '2465'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_02_12_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2399'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_09_22_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2542'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_11_24_07_03_AMD64.cab'; ALTERNATEDATAVERSION = '2459'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_28_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2398'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_17_05_03_AMD64.cab'; ALTERNATEDATAVERSION = '2461'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_11_24_07_02_AMD64.cab'; ALTERNATEDATAVERSION = '2393'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_09_13_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2541'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_10_07_02_AMD64.cab'; ALTERNATEDATAVERSION = '2394'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_07_05_03_AMD64.cab'; ALTERNATEDATAVERSION = '2462'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_14_02_03_AMD64.cab'; ALTERNATEDATAVERSION = '2463'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_07_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2396'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_10_01_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2387'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_10_07_03_AMD64.cab'; ALTERNATEDATAVERSION = '2460'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_17_03_02_AMD64.cab'; ALTERNATEDATAVERSION = '2375'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_26_06_02_AMD64.cab'; ALTERNATEDATAVERSION = '2376'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_07_29_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2501'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_03_11_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2401'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_02_20_06_05_AMD64.cab'; ALTERNATEDATAVERSION = '2360'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_05_28_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2372'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_02_10_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2522'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_17_03_02_AMD64.cab'; ALTERNATEDATAVERSION = '2375'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_26_06_02_AMD64.cab'; ALTERNATEDATAVERSION = '2376'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_07_23_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2379'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_10_01_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2387'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_10_26_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2390'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_11_05_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2391'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_12_09_11_02_AMD64.cab'; ALTERNATEDATAVERSION = '2515'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_10_14_12_02_AMD64.cab'; ALTERNATEDATAVERSION = '2509'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_02_24_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2523'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_08_24_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2540'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_20_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2519'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_04_28_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2528'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_27_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2521'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_21_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2520'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_06_02_12_01_AMD64.cab'; ALTERNATEDATAVERSION = '2530'}
-@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_03_24_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2524'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_11_24_07_02_AMD64.cab'; ALTERNATEDATAVERSION = '2393'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_10_07_02_AMD64.cab'; ALTERNATEDATAVERSION = '2394'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_17_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2395'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_07_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2396'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_14_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2397'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_28_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2398'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_02_12_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2399'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_03_11_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2401'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_12_16_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2430'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_11_24_07_03_AMD64.cab'; ALTERNATEDATAVERSION = '2459'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_10_07_03_AMD64.cab'; ALTERNATEDATAVERSION = '2460'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_12_17_05_03_AMD64.cab'; ALTERNATEDATAVERSION = '2461'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_07_05_03_AMD64.cab'; ALTERNATEDATAVERSION = '2462'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_14_02_03_AMD64.cab'; ALTERNATEDATAVERSION = '2463'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_01_28_04_03_AMD64.cab'; ALTERNATEDATAVERSION = '2464'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_02_12_02_03_AMD64.cab'; ALTERNATEDATAVERSION = '2465'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_07_29_02_02_AMD64.cab'; ALTERNATEDATAVERSION = '2501'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_10_14_12_02_AMD64.cab'; ALTERNATEDATAVERSION = '2509'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2021_12_09_11_02_AMD64.cab'; ALTERNATEDATAVERSION = '2515'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_20_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2519'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_21_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2520'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_01_27_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2521'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_02_10_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2522'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_02_24_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2523'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_03_24_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2524'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_04_28_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2528'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_06_02_12_01_AMD64.cab'; ALTERNATEDATAVERSION = '2530'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_08_24_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2540'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_09_13_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2541'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_09_22_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2542'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_09_29_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2543'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_06_01_01_AMD64.cab'; ALTERNATEDATAVERSION = '2544'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_13_02_01_AMD64.cab'; ALTERNATEDATAVERSION = '2545'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_20_12_01_AMD64.cab'; ALTERNATEDATAVERSION = '2546'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_27_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2547'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_27_03_02_AMD64.cab'; ALTERNATEDATAVERSION = '2614'}
+
 
 )
 
