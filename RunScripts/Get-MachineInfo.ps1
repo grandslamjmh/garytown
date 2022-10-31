@@ -811,6 +811,7 @@ Write-Output "Current Client UTC: $TimeUTC"
 Write-Output "Time Zone: $(Get-TimeZone)"
 $Locale = Get-WinSystemLocale
 if ($Locale -ne "en-US"){Write-Output "WinSystemLocale: $locale"}
+Get-WmiObject win32_LogicalDisk -Filter "DeviceID='C:'" | % { $FreeSpace = $_.FreeSpace/1GB -as [int] ; $DiskSize = $_.Size/1GB -as [int] }
 
 
 if (Test-Path -Path "C:\windows\ccm\ccmexec.exe"){
@@ -855,7 +856,6 @@ if (Test-Path -Path "C:\windows\ccm\ccmexec.exe"){
 }
 
 
-Get-WmiObject win32_LogicalDisk -Filter "DeviceID='C:'" | % { $FreeSpace = $_.FreeSpace/1GB -as [int] ; $DiskSize = $_.Size/1GB -as [int] }
 
 Write-Output "DiskSize = $DiskSize, FreeSpace = $Freespace"
     #Get Volume Infomration
