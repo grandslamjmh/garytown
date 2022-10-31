@@ -5,6 +5,8 @@ Based on https://github.com/AdamGrossTX/FU.WhyAmIBlocked/blob/master/Get-Safegua
 
 Basically I ran this in my environment:
 #CMPIVOT Query
+
+``` powershell
 <#
 Registry('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\*') | where Property == 'GatedBlockId' and Value != '' and Value != 'None'
 | join kind=inner (
@@ -15,8 +17,8 @@ Registry('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Targ
 		| where Property == 'ALTERNATEDATAVERSION')
 | project Device,GatedBlockID=Value,ALTERNATEDATALINK=Value1,ALTERNATEDATAVERSION=Value2
 #>
-
-I gathered all of the URLs (ALTERNATEDATALINK) & Versions (ALTERNATEDATAVERSION), and place them into my build script.
+```
+I gathered all of the URLs (ALTERNATEDATALINK) & Versions (ALTERNATEDATAVERSION), and place them into my [build script](https://github.com/gwblok/garytown/blob/master/Feature-Updates/SafeGuardHolds/Get-SafeGuardHoldData.ps1).
 
 If you find URLs and Versions which I do not have listed, please send them to me (@gwblok on Twitter), and I'll add those and rebuild the database with anything additional that gets added.
 
