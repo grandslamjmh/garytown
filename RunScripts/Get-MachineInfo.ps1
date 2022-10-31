@@ -9,6 +9,7 @@ I'm using it as a Run Script to get information from devices over CMG, as I can'
 
 
 22.10.25 - Added SafeGuard & Win11 Check
+22.10.31 - Added Serial
 
 #>
 Function Test-PendingReboot {
@@ -737,6 +738,7 @@ if ($ManufacturerBaseBoard -eq "Intel Corporation")
     $ComputerModel = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product
     }
 $HPProdCode = (Get-CimInstance -Namespace root/cimv2 -ClassName Win32_BaseBoard).Product
+$Serial = (Get-WmiObject -class:win32_bios).SerialNumber
 $cpuDetails = @(Get-WmiObject -Class Win32_Processor)[0]
 
 Write-Output "Computer Name: $env:computername"
@@ -797,6 +799,7 @@ catch
     }
 
 Write-Output "Computer Model: $ComputerModel"
+Write-Output "Serial: $Serial"
 if ($Manufacturer -like "H*"){Write-Output "Computer Product Code: $HPProdCode"}
 Write-Output $cpuDetails.Name
 Write-Output "Current BIOS Level: $($BIOSInfo.SMBIOSBIOSVersion) From Date: $CurrentBIOSDate"
