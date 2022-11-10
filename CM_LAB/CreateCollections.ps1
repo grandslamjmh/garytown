@@ -1,17 +1,13 @@
-<# GARY BLOK - @gwblok - GARYTOWN.COM
+<#  GARYTOWN.COM - @gwblok 
 
-Creates Folder Structure & Operational Collections
+Creates Folders & Collections
 
-Update $CompanyName
+Please look through the script before you run, make sure you understand what is all being created....
 
-
-Collections:
-All Workstations
-Operating System Builds (1 Per Build starting with 1809)
-Fast Policy (Query based on machines created in last 24 hours)
-
+I'm not suggesting you use this structure in your own environment, I'm hoping that you'll find the Collection Creation useful.
 
 #>
+
 
 #Get SiteCode
 $SiteCode = Get-PSDrive -PSProvider CMSITE
@@ -42,7 +38,7 @@ Foreach ($CollectionName in $CollectionNames){
 
 $CompanyName = "GARYTOWN"
 
-#Create Folders in CM
+#region Create Folders in CM
 $DeviceFolderNames = @(
 
 @{ Name = "$CompanyName"; Parent = 'Root'}
@@ -56,7 +52,7 @@ $DeviceFolderNames = @(
 Foreach ($FolderName in $DeviceFolderNames){
     $CollectionFolderName = $FolderName.Name
     $ParentFolderName = $FolderName.Parent
-    Write-Output "Starting $CollectionFolderName | $ParentFolderName"
+    #Write-Output "Starting $CollectionFolderName | $ParentFolderName"
     if ($ParentFolderName -eq "Root"){
         #Create Collection Folder
         If ((-not (Test-Path -Path ($SiteCode.Name +":\DeviceCollection\$CollectionFolderName"))))
@@ -88,6 +84,7 @@ Foreach ($FolderName in $DeviceFolderNames){
         }
     }
 }
+#endregion Create Folders in CM
 
 #Move Default CM Collections to "CM Default" Folder
 $DefaultCMCollections = Get-CMDeviceCollection | Where-Object {$_.collectionid -match "SMS"}
@@ -96,7 +93,7 @@ ForEach ($DefaultCMCollection in $DefaultCMCollections){
     Move-CMObject -FolderPath $DefaultFolderPath -InputObject $(Get-CMDeviceCollection -Id $DefaultCMCollection.collectionid)
     }
 
-#Create Fast Policy Collection in $CompanyName \ Administration Folder
+#region Create Fast Policy Collection in $CompanyName \ Administration Folder
 $CollectionName = "Fast Policy"
 $CollectionLimitingCol = $(Get-CMDeviceCollection -Name "All Desktop and Server Clients")
 $CollectionLocation = ($SiteCode.Name +":\DeviceCollection\$CompanyName\Administration")
@@ -108,15 +105,15 @@ $CurrentCollectionID = (Get-CMCollection -Name $CollectionName).CollectionID
 if ($CurrentCollectionID -eq $null){
     Write-host "Creating Fast Policy Collection" -ForegroundColor Green
 
-    New-CMDeviceCollection -Name $CollectionName -Comment "New Machines Setup Collection (Fast Policy)" -LimitingCollectionId $CollectionLimitingCol.CollectionID -RefreshType Both -RefreshSchedule $CollectionSchedule
+    New-CMDeviceCollection -Name $CollectionName -Comment "New Machines Setup Collection (Fast Policy)" -LimitingCollectionId $CollectionLimitingCol.CollectionID -RefreshType Both -RefreshSchedule $CollectionSchedule | Out-Null
     Add-CMDeviceCollectionQueryMembershipRule -RuleName "Query Fast Policy" -CollectionName $CollectionName -QueryExpression $CollectionQuery_FastPolicy | Out-Null
     Move-CMObject -FolderPath $CollectionLocation -InputObject $(Get-CMDeviceCollection -Name $CollectionName)
     }
 else {Write-Host "Collection Already Created" -ForegroundColor Yellow}
 
+#endregion Create Fast Policy Collection
 
-
-#Confirm All Workstation Collection, or create it if needed
+#region Confirm All Workstation Collection, or create it if needed
 $CollectionSchedule = New-CMSchedule -Start (Get-Date).DateTime -RecurInterval Days -RecurCount 7
 $CollectionLocation = ($SiteCode.Name +":\DeviceCollection\$CompanyName\Administration")
 $CollectionName = "All Workstations"
@@ -127,7 +124,7 @@ $CollectionQueryAllWorkstations = @"
 select SMS_R_System.Name from  SMS_R_System where SMS_R_System.OperatingSystemNameandVersion like "Microsoft Windows NT Workstation%"
 "@     
     
-    New-CMDeviceCollection -Name $CollectionName -Comment "Collection of all workstation machines" -LimitingCollectionName "All Systems" -RefreshSchedule $CollectionSchedule -RefreshType 2 |Out-Null
+    New-CMDeviceCollection -Name $CollectionName -Comment "Collection of all workstation machines" -LimitingCollectionName "All Desktop and Server Clients" -RefreshSchedule $CollectionSchedule -RefreshType 2 |Out-Null
     Add-CMDeviceCollectionQueryMembershipRule -RuleName "All Workstations" -CollectionName $CollectionName -QueryExpression $CollectionQueryAllWorkstations | Out-Null
     $AllWorkstationCollection = Get-CMCollection -Name $CollectionName
     Write-Host "Created All Workstations Collection ID: $($AllWorkstationCollection.CollectionID), which will be used as the limiting collections moving forward" -ForegroundColor Green
@@ -136,8 +133,9 @@ select SMS_R_System.Name from  SMS_R_System where SMS_R_System.OperatingSystemNa
     }
 else {Write-Host "Found All Workstations Collection ID: $($AllWorkstationCollection.CollectionID), which will be used as the limiting collections moving forward" -ForegroundColor Green}
 
+#endregion Confirm All Workstation Collection
 
-#Operating Systems Collections
+#region Operating Systems Collections
 
 $CollectionSchedule = New-CMSchedule -Start (Get-Date).DateTime -RecurInterval Days -RecurCount 7
 $CollectionLocation = ($SiteCode.Name +":\DeviceCollection\$CompanyName\Administration\Operating Systems")
@@ -159,7 +157,7 @@ $OSCollections = @(
 
 ForEach ($OSCollection in $OSCollections){
     $CollectionName = $OSCollection.Name
-    $PreCheck = Get-CMCollection -Name $CollectionName
+    $PreCheck = Get-CMCollection -Name $CollectiomnName
     if ($PreCheck -eq $Null){
         $Build = $OSCollection.Build
         $Comment = "Query based on Build $Build"
@@ -176,4 +174,76 @@ select distinct SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.N
     else {Write-Host "Collection Already Created: $($PreCheck.CollectionID)" -ForegroundColor Yellow}
 }
      
-    
+#endregion Operating Systems Collections
+
+
+
+#region Active / inactive Collections
+$CollectionSchedule = New-CMSchedule -Start (Get-Date).DateTime -RecurInterval Days -RecurCount 3
+$CollectionLocation = ($SiteCode.Name +":\DeviceCollection\$CompanyName\Administration")
+$CollectionLimitingCol = "All Workstations"
+
+$ActiveClientsName = "All Active Clients"
+$ActiveClientsQuery = @"
+select SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.Name,SMS_R_SYSTEM.SMSUniqueIdentifier,SMS_R_SYSTEM.ResourceDomainORWorkgroup,SMS_R_SYSTEM.Client from SMS_R_System inner join SMS_G_System_CH_ClientSummary on SMS_G_System_CH_ClientSummary.ResourceId = SMS_R_System.ResourceId where SMS_G_System_CH_ClientSummary.ClientActiveStatus = 1 and SMS_R_System.Client = "1"
+"@
+
+$CollectionName = $ActiveClientsName
+$PreCheck = Get-CMCollection -Name $CollectionName
+if ($PreCheck -eq $Null){
+    $Comment = "Devices with an active client. (Query)"
+    New-CMDeviceCollection -Name $CollectionName -Comment $Comment -LimitingCollectionName $CollectionLimitingCol -RefreshSchedule $CollectionSchedule -RefreshType 2 |Out-Null
+    Add-CMDeviceCollectionQueryMembershipRule -RuleName "$ActiveClientsName" -CollectionName $CollectionName -QueryExpression $ActiveClientsQuery | Out-Null
+    $Confirm = Get-CMCollection -Name $CollectionName
+    Write-Host "Created Collection $CollectionName Collection ID: $($Confirm.CollectionID)" -ForegroundColor Green
+    Move-CMObject -FolderPath $CollectionLocation -InputObject $(Get-CMDeviceCollection -Name $CollectionName)
+}
+else {Write-Host "Collection Already Created: $($PreCheck.CollectionID)" -ForegroundColor Yellow}
+
+$InactiveClientsName = "All Inactive Clients"
+$InactiveClientsQuery = @"
+select SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.Name,SMS_R_SYSTEM.SMSUniqueIdentifier,SMS_R_SYSTEM.ResourceDomainORWorkgroup,SMS_R_SYSTEM.Client from SMS_R_System inner join SMS_G_System_CH_ClientSummary on SMS_G_System_CH_ClientSummary.ResourceID = SMS_R_System.ResourceId where SMS_G_System_CH_ClientSummary.ClientActiveStatus = 0
+"@
+
+
+$CollectionName = $InactiveClientsName
+$PreCheck = Get-CMCollection -Name $CollectionName
+if ($PreCheck -eq $Null){
+    $Comment = "Devices with an inactive client. (Query)"
+    New-CMDeviceCollection -Name $CollectionName -Comment $Comment -LimitingCollectionName $CollectionLimitingCol -RefreshSchedule $CollectionSchedule -RefreshType 2 |Out-Null
+    Add-CMDeviceCollectionQueryMembershipRule -RuleName "$ActiveClientsName" -CollectionName $CollectionName -QueryExpression $InactiveClientsQuery | Out-Null
+    $Confirm = Get-CMCollection -Name $CollectionName
+    Write-Host "Created Collection $CollectionName Collection ID: $($Confirm.CollectionID)" -ForegroundColor Green
+    Move-CMObject -FolderPath $CollectionLocation -InputObject $(Get-CMDeviceCollection -Name $CollectionName)
+}
+else {Write-Host "Collection Already Created: $($PreCheck.CollectionID)" -ForegroundColor Yellow}
+
+
+#endregion Active / inactive Collections
+
+#region Production Rings based on HWID
+
+$HWIDs = @("0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F")
+$CollectionSchedule = New-CMSchedule -Start (Get-Date).DateTime -RecurInterval Days -RecurCount 7
+$CollectionLocation = ($SiteCode.Name +":\DeviceCollection\$CompanyName\Administration")
+$CollectionLimitingCol = "All Workstations"
+$Comment = "1 of 16 Collections to be used in phasing deployments"
+ForEach ($HWID in $HWIDs){
+    $CollectionName = "Production Workstations (HWID Starts with $HWID)"
+    $PreCheck = Get-CMCollection -Name $CollectionName
+    if ($PreCheck -eq $Null){
+        $Query = $HWID
+$CollectionQueryHWID = @"
+select SMS_R_SYSTEM.ResourceID,SMS_R_SYSTEM.ResourceType,SMS_R_SYSTEM.Name,SMS_R_SYSTEM.SMSUniqueIdentifier,SMS_R_SYSTEM.ResourceDomainORWorkgroup,SMS_R_SYSTEM.Client from SMS_R_System    WHERE SMS_R_System.HardwareID like "2:$($Query)%"
+"@
+
+        New-CMDeviceCollection -Name $CollectionName -Comment $Comment -LimitingCollectionName $CollectionLimitingCol -RefreshSchedule $CollectionSchedule -RefreshType 2 |Out-Null
+        Add-CMDeviceCollectionQueryMembershipRule -RuleName "HWID: $Query" -CollectionName $CollectionName -QueryExpression $CollectionQueryHWID | Out-Null
+        $Confirm = Get-CMCollection -Name $CollectionName
+        Write-Host "Created Collection $CollectionName Collection ID: $($Confirm.CollectionID)" -ForegroundColor Green
+        Move-CMObject -FolderPath $CollectionLocation -InputObject $(Get-CMDeviceCollection -Name $CollectionName)
+    }
+    else {Write-Host "Collection Already Created: $($PreCheck.CollectionID)" -ForegroundColor Yellow}
+}
+
+#endregion
