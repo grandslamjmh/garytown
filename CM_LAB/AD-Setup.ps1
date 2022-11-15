@@ -1,5 +1,5 @@
 $Company = "GARYTOWN"
-$DefaultPassword = "P@ssw0rd!"
+
 
 #region Create OUs
 
@@ -93,7 +93,7 @@ ForEach ($ADUser in $ADUsers){
     $LogonWorkstation = $AdUser.LogonWorkstations
     if (!(Get-ADUser -Filter "Name -eq '$Name'")){
         $Description = $ADUser.Description
-        New-ADUser -Name $Name -Description $Description -PasswordNeverExpires:$true -AccountPassword (ConvertTo-SecureString $DefaultPassword -AsPlainText -Force) -Enabled:$true -Company $Company -EmployeeNumber $EmployeeNumber -GivenName $GivenName -Surname $Surname -DisplayName "$GivenName $Surname" -UserPrincipalName $Name
+        New-ADUser -Name $Name -Description $Description -PasswordNeverExpires:$true -AccountPassword (ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force) -Enabled:$true -Company $Company -EmployeeNumber $EmployeeNumber -GivenName $GivenName -Surname $Surname -DisplayName "$GivenName $Surname" -UserPrincipalName $Name
         $User = Get-ADUser -Identity $Name
         Move-ADObject -Identity $User.DistinguishedName -TargetPath $UsersGroupsOU.DistinguishedName
         $User = Get-ADUser -Identity $Name
