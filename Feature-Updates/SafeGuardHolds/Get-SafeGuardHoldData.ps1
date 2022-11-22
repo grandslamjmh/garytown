@@ -1,13 +1,20 @@
 <# Gary Blok @gwblok GARYTOWN.COM
 Based on https://github.com/AdamGrossTX/FU.WhyAmIBlocked/blob/master/Get-SafeguardHoldInfo.ps1 by Adam Gross
-This script is nealy 100% copied from the link above, then I added the last part to build a database and export to JSON.
+
+More info: https://github.com/gwblok/garytown/tree/master/Feature-Updates/SafeGuardHolds
 #>
 
-#requires -modules FU.WhyAmIBlocked
+<#
 
-#Run this on the client to pull the appraiser db info and client safeguard hold IDs.
-#Or run CMPivot to pull this info from the registry
+requires -modules FU.WhyAmIBlocked
+Run CMPivot to pull this info from the registry & Add to "SettingsTable" anything that is missing.
+I typically copy and paste the results from CMPivot into Excel only keeping the two columns "ALTERNATEDATALINK & ALTERNATEDATAVERSION"
+  While in Excel, delete duplicates (Data Tab), then Sort on Version
+  I then compare the item in Excel with the Settings Table and add anything new to the Settings Table.
+  If you find anything I don't have, please contact me on Twitter @gwblok or GMAIL - garywblok and send me the ones I don't have listed below.
 
+
+#>
 #CMPIVOT Query
 <#
 Registry('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators\*') | where Property == 'GatedBlockId' and Value != '' and Value != 'None'
@@ -23,133 +30,15 @@ Registry('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Targ
 
 <# Updates
 22.10.28 - Added more rows to the Lookup.
-
+22.11.22 - Added more rows to the Lookup
+22.11.22 - Rewrote process to be more efficent. 
+  - Removed Unused function
+  - Removed function and just incorporated the code into the script
+  - Skips Items that were already completed in a previous run
+    - Skips downloading and extracting the XML, still parses XML and adds info to the Database.
 
 
 #>
-$Path = 'C:\Temp'
-
-function Get-ClientSafeguardHoldInfo {
-    param(
-        [parameter(mandatory = $true)]
-        [string]$OS
-    )
-    try {
-        $SettingsKey = Get-Item -Path Registry::"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\OneSettings\compat\appraiser\Settings"
-        $TargetVersionUpgradeExperienceIndicatorsKeys = Get-ChildItem -Path Registry::"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\TargetVersionUpgradeExperienceIndicators" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq $OS }
-        $Settings = @{
-            ALTERNATEDATALINK    = $SettingsKey | Get-ItemPropertyValue -Name "ALTERNATEDATALINK"
-            ALTERNATEDATAVERSION = $SettingsKey | Get-ItemPropertyValue -Name "ALTERNATEDATAVERSION"
-            GatedBlockId         = ($TargetVersionUpgradeExperienceIndicatorsKeys | Get-ItemProperty -Name "GatedBlockId" -ErrorAction SilentlyContinue).GatedBlockId
-        }
-
-        return $Settings
-    }
-    catch {
-        throw $_
-    }
-}
-
-#Pass in client info to get details
-function Get-SafeGuardHoldDetails {
-    Param (
-        [parameter(Mandatory = $true)]
-        [string]$AppraiserURL,
-        
-        [parameter(Mandatory = $true)]
-        [int]$AppraiserVersion,
-
-        [parameter(Mandatory = $false)]
-        [string[]]$SafeGuardHoldId,
-
-        $Path = "C:\Temp"
-    )
-
-    $AppriaserRoot = $Path
-    try {[void][System.IO.Directory]::CreateDirectory($AppriaserRoot)}
-    catch {throw}
-
-    $ExistingXML = Get-ChildItem -Path $AppriaserRoot\*.xml -Recurse -File | Where-Object { $_.Name -like "*$AppraiserVersion*" } -ErrorAction SilentlyContinue
-
-    if (-Not $ExistingXML) {
-        $LinkParts = $AppraiserURL.Split("/")
-        $OutFileName = "$($AppraiserVersion)_$($LinkParts[$LinkParts.Count-1])"
-        $OutFilePath = "$AppriaserRoot\AppraiserData"
-
-        if (-not (Test-Path $OutFilePath)) {
-            New-Item -Path $OutFilePath -ItemType Directory -Force -ErrorAction SilentlyContinue
-        }
-        
-        Invoke-WebRequest -URI $AppraiserURL -OutFile "$OutFilePath\$OutFileName"
-    
-        Export-FUXMLFromSDB -AlternateSourcePath $OutFilePath -Path $AppriaserRoot
-        $ExistingXML = Get-ChildItem -Path $AppriaserRoot\*.xml -Recurse -File | Where-Object { $_.Name -like "*$AppraiserVersion*" } -ErrorAction SilentlyContinue
-    }
-
-    $DBBlocks = if ($ExistingXML) {
-        [xml]$Content = Get-Content -Path $ExistingXML -Raw
-
-        $OSUpgrade = $Content.SelectNodes("//SDB/DATABASE/OS_UPGRADE")
-        $GatedBlockOSU = $OSUpgrade | Where-Object { $_.DATA.Data_String.'#text' -eq 'GatedBlock' } 
-    
-        $GatedBlockOSU | ForEach-Object {
-            @{
-                AppName       = $_.App_Name.'#text'
-                BlockType     = $_.Data[0].Data_String.'#text'
-                SafeguardId   = $_.Data[1].Data_String.'#text'
-                NAME          = $_.NAME.'#text'
-                APP_NAME      = $_.APP_NAME.'#text'
-                VENDOR        = $_.VENDOR.'#text'
-                EXE_ID        = $_.EXE_ID.'#text'
-                DEST_OS_GTE   = $_.DEST_OS_GTE.'#text'
-                DEST_OS_LT    = $_.DEST_OS_LT.'#text'
-                MATCHING_FILE = $_.MATCHING_FILE.'#text'
-                PICK_ONE      = $_.PICK_ONE.'#text'
-                INNERXML      = $_.InnerXML
-            }
-        }
-    
-        $MIB = $Content.SelectNodes("//SDB/DATABASE/MATCHING_INFO_BLOCK")
-        $GatedBlockMIB = $MIB | Where-Object { $_.DATA.Data_String.'#text' -eq 'GatedBlock' }
-        $GatedBlockMIB | ForEach-Object {
-            @{
-                AppName         = $_.App_Name.'#text'
-                BlockType       = $_.Data[0].Data_String.'#text'
-                SafeguardId     = $_.Data[1].Data_String.'#text'
-                APP_NAME        = $_.APP_NAME.'#text'
-                DEST_OS_GTE     = $_.DEST_OS_GTE.'#text'
-                DEST_OS_LT      = $_.DEST_OS_LT.'#text'
-                EXE_ID          = $_.EXE_ID.'#text'
-                MATCH_PLUGIN    = $_.MATCH_PLUGIN.Name.'#text'
-                MATCHING_DEVICE = $_.MATCHING_DEVICE.Name.'#text'
-                MATCHING_REG    = $_.MATCHING_REG.Name.'#text'
-                NAME            = $_.NAME.'#text'
-                PICK_ONE        = $_.PICK_ONE.Name.'#text'
-                SOURCE_OS_LTE   = $_.SOURCE_OS_LTE.'#text'
-                VENDOR          = $_.VENDOR.'#text'
-                INNERXML        = $_.InnerXML
-            }
-        }
-    } Select-Object -Unique * | Sort-Object AppName
-
-
-    if ($SafeGuardHoldId) {
-        $DBBlocks | Where-Object { $_.SafeguardId -in $SafeGuardHoldId } | ForEach-Object { [PSCustomObject]$_ }
-    }
-    else {
-        $DBBlocks | ForEach-Object { [PSCustomObject]$_ }
-    }
-}
-
-#$Settings = Get-ClientSafeguardHoldInfo -OS "CO21H2"
-
-#Run this with a list of ids to get specific entries
-#Get-SafeGuardHoldDetails -AppraiserURL $Settings.ALTERNATEDATALINK -AppraiserVersion $Settings.ALTERNATEDATAVERSION -SafeGuardHoldId $Settings.GatedBlockId 
-
-#Run this with no ids to list all safeguard holds from the appraiser db
-#Get-SafeGuardHoldDetails -AppraiserURL $Settings.ALTERNATEDATALINK -AppraiserVersion $Settings.ALTERNATEDATAVERSION
-
-
 
 $SettingsTable = @(
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_02_20_06_05_AMD64.cab'; ALTERNATEDATAVERSION = '2360'}
@@ -203,13 +92,87 @@ $SettingsTable = @(
 
 )
 
+$Path = "C:\Temp"
+$AppriaserRoot = $Path
+try {[void][System.IO.Directory]::CreateDirectory($AppriaserRoot)}
+catch {throw}
+    
+#Download all Appraiser CAB Files
 $SafeGuardHoldCombined = @()
-foreach ($Settings in $SettingsTable){
-    $SafeGuardHoldDataWorking  = $null
-    $SafeGuardHoldDataWorking = Get-SafeGuardHoldDetails -AppraiserURL $Settings.ALTERNATEDATALINK -AppraiserVersion $Settings.ALTERNATEDATAVERSION -Path $Path
-    $SafeGuardHoldCombined += $SafeGuardHoldDataWorking 
-}
+$Count = 0
+$TotalCount = $SettingsTable.Count
+ForEach ($Item in $SettingsTable){  
+    $Count = $Count + 1 
+    $AppraiserURL = $Item.ALTERNATEDATALINK
+    $AppraiserVersion = $Item.ALTERNATEDATAVERSION
+    Write-Host "---------------------------------------------------------------------------" -ForegroundColor DarkGray
+    Write-Host "Starting on Version $AppraiserVersion, $Count of $TotalCount Items" -ForegroundColor Magenta
+    $OutFilePath = "$AppriaserRoot\AppraiserData\$AppraiserVersion"
+    $ExistingCAB = Get-ChildItem -Path $AppriaserRoot\*.cab -Recurse -File | Where-Object { $_.Name -like "*$AppraiserVersion*" } -ErrorAction SilentlyContinue
+    if (-Not $ExistingCAB) {
+        $LinkParts = $AppraiserURL.Split("/")
+        $OutFileName = "$($AppraiserVersion)_$($LinkParts[$LinkParts.Count-1])"
+        if (-not (Test-Path $OutFilePath)) {New-Item -Path $OutFilePath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null}     
+        Invoke-WebRequest -URI $AppraiserURL -OutFile "$OutFilePath\$OutFileName"
+    }
+    $ExistingXMLS = Get-ChildItem -Path $AppriaserRoot\*.xml -Recurse -File | Where-Object { $_.Name -like "*$AppraiserVersion*" } -ErrorAction SilentlyContinue
+    if (-Not $ExistingXMLS){
+        Export-FUXMLFromSDB -AlternateSourcePath $OutFilePath -Path $AppriaserRoot
+    }
+    foreach ($ExistingXML in $ExistingXMLS){
+        $SafeGuardHoldDataWorking  = $null
+        $DBBlocks = if ($ExistingXML) {
+            [xml]$Content = Get-Content -Path $ExistingXML -Raw
+            $OSUpgrade = $Content.SelectNodes("//SDB/DATABASE/OS_UPGRADE")
+            $GatedBlockOSU = $OSUpgrade | Where-Object { $_.DATA.Data_String.'#text' -eq 'GatedBlock' }  
+            $GatedBlockOSU | ForEach-Object {
+                @{
+                    AppName       = $_.App_Name.'#text'
+                    BlockType     = $_.Data[0].Data_String.'#text'
+                    SafeguardId   = $_.Data[1].Data_String.'#text'
+                    NAME          = $_.NAME.'#text'
+                    APP_NAME      = $_.APP_NAME.'#text'
+                    VENDOR        = $_.VENDOR.'#text'
+                    EXE_ID        = $_.EXE_ID.'#text'
+                    DEST_OS_GTE   = $_.DEST_OS_GTE.'#text'
+                    DEST_OS_LT    = $_.DEST_OS_LT.'#text'
+                    MATCHING_FILE = $_.MATCHING_FILE.'#text'
+                    PICK_ONE      = $_.PICK_ONE.'#text'
+                    INNERXML      = $_.InnerXML
+                }
+            }
+            $MIB = $Content.SelectNodes("//SDB/DATABASE/MATCHING_INFO_BLOCK")
+            $GatedBlockMIB = $MIB | Where-Object { $_.DATA.Data_String.'#text' -eq 'GatedBlock' }
+            $GatedBlockMIB | ForEach-Object {
+                @{
+                    AppName         = $_.App_Name.'#text'
+                    BlockType       = $_.Data[0].Data_String.'#text'
+                    SafeguardId     = $_.Data[1].Data_String.'#text'
+                    APP_NAME        = $_.APP_NAME.'#text'
+                    DEST_OS_GTE     = $_.DEST_OS_GTE.'#text'
+                    DEST_OS_LT      = $_.DEST_OS_LT.'#text'
+                    EXE_ID          = $_.EXE_ID.'#text'
+                    MATCH_PLUGIN    = $_.MATCH_PLUGIN.Name.'#text'
+                    MATCHING_DEVICE = $_.MATCHING_DEVICE.Name.'#text'
+                    MATCHING_REG    = $_.MATCHING_REG.Name.'#text'
+                    NAME            = $_.NAME.'#text'
+                    PICK_ONE        = $_.PICK_ONE.Name.'#text'
+                    SOURCE_OS_LTE   = $_.SOURCE_OS_LTE.'#text'
+                    VENDOR          = $_.VENDOR.'#text'
+                    INNERXML        = $_.InnerXML
+                }
+            }
+        } Select-Object -Unique * | Sort-Object AppName
+    $SafeGuardHoldDataWorking  = $DBBlocks | ForEach-Object { [PSCustomObject]$_ }
+    $SafeGuardHoldCombined += $SafeGuardHoldDataWorking
+    }
 
+}
+Write-Host "Found $($SafeGuardHoldCombined.Count) Safeguard hold Items contained in the $TotalCount Appraiser DB Versions, exported to $Path\SafeGuardHoldCombinedDataBase.json" -ForegroundColor Green
+$SafeGuardHoldCombined | ConvertTo-Json | Out-File "$Path\SafeGuardHoldCombinedDataBase.json"
+
+#Get Unique based on ID.  Assuming that all all safeguards with the same number are unique.
+Write-Host " Building Database of Unique Safeguard IDs...." -ForegroundColor Magenta
 $SafeGuardHoldIDs = $SafeGuardHoldCombined.SafeguardID | Select-Object -Unique
 $SafeGuardHoldDatabase = @()
 ForEach ($SafeGuardHoldID in $SafeGuardHoldIDs){
@@ -220,6 +183,4 @@ ForEach ($SafeGuardHoldID in $SafeGuardHoldIDs){
 
 $SafeGuardHoldDatabase | ConvertTo-Json | Out-File "$Path\SafeGuardHoldDataBase.json"
 
-
-#Testing Vars:
-#$SafeGuardHoldID = '25178825'
+Write-Host "Found $($SafeGuardHoldDatabase.Count) unique Safeguard hold Items, exported to $Path\SafeGuardHoldDataBase.json" -ForegroundColor Green
