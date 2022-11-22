@@ -1886,5 +1886,22 @@
                          ],
         "DEST_OS_GTE":  "NI22H2",
         "DEST_OS_LT":  "CU23H2"
+    },
+    {
+        "APP_NAME":  "EasyAntiCheat",
+        "SafeguardId":  "41990091",
+        "EXE_ID":  "{614655f5-12ef-4179-916b-7212ea8f7ddd}",
+        "PICK_ONE":  null,
+        "AppName":  "EasyAntiCheat",
+        "VENDOR":  "Epic Games, Inc",
+        "NAME":  null,
+        "BlockType":  "GatedBlock",
+        "INNERXML":  "\u003cNAME type=\"xs:string\"\u003e\u003c/NAME\u003e\u003cAPP_NAME type=\"xs:string\"\u003eEasyAntiCheat\u003c/APP_NAME\u003e\u003cVENDOR type=\"xs:string\"\u003eEpic Games, Inc\u003c/VENDOR\u003e\u003cEXE_ID type=\"xs:string\" baseType=\"xs:base64Binary\"\u003e{614655f5-12ef-4179-916b-7212ea8f7ddd}\u003c/EXE_ID\u003e\u003cAPP_ID type=\"xs:base64Binary\" /\u003e\u003cDEST_OS_GTE type=\"xs:string\"\u003eNI22H2\u003c/DEST_OS_GTE\u003e\u003cDEST_OS_LT type=\"xs:string\"\u003eCU23H2\u003c/DEST_OS_LT\u003e\u003cPICK_ONE\u003e\u003cMATCHING_FILE\u003e\u003cNAME type=\"xs:string\"\u003e%ProgramFiles%\\EasyAntiCheat\\EasyAntiCheat.exe\u003c/NAME\u003e\u003c/MATCHING_FILE\u003e\u003cMATCHING_FILE\u003e\u003cNAME type=\"xs:string\"\u003e%ProgramFiles(X86)%\\EasyAntiCheat\\EasyAntiCheat.exe\u003c/NAME\u003e\u003c/MATCHING_FILE\u003e\u003c/PICK_ONE\u003e\u003cDATA\u003e\u003cNAME type=\"xs:string\"\u003eAppraiserData\u003c/NAME\u003e\u003cDATA_VALUETYPE type=\"xs:int\"\u003e1\u003c/DATA_VALUETYPE\u003e\u003cDATA_STRING type=\"xs:string\"\u003eGatedBlock\u003c/DATA_STRING\u003e\u003c/DATA\u003e\u003cDATA\u003e\u003cNAME type=\"xs:string\"\u003eAppraiserData_GatedBlockId\u003c/NAME\u003e\u003cDATA_VALUETYPE type=\"xs:int\"\u003e1\u003c/DATA_VALUETYPE\u003e\u003cDATA_STRING type=\"xs:string\"\u003e41990091\u003c/DATA_STRING\u003e\u003c/DATA\u003e",
+        "MATCHING_DEVICE":  null,
+        "MATCH_PLUGIN":  null,
+        "SOURCE_OS_LTE":  null,
+        "MATCHING_REG":  null,
+        "DEST_OS_GTE":  "NI22H2",
+        "DEST_OS_LT":  "CU23H2"
     }
 ]
