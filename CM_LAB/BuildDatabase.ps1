@@ -112,7 +112,7 @@ FILEGROUP FG_$($DBName)
     FILEGROWTH=$FG_FileGrowth)
 LOG ON
   ( NAME='$($DBName)_log',
-    FILENAME = '$LogPath\$DBName_Log.ldf',
+    FILENAME = '$LogPath\$($DBName)_Log.ldf',
     SIZE=$Log_SizeDB,
     MAXSIZE=$Log_MaxSizeDB,
     FILEGROWTH=$Log_FileGrowth);
