@@ -1,7 +1,5 @@
 <# Gary Blok @gwblok GARYTOWN.COM
 Based on https://github.com/AdamGrossTX/FU.WhyAmIBlocked/blob/master/Get-SafeguardHoldInfo.ps1 by Adam Gross
-
-More info: https://github.com/gwblok/garytown/tree/master/Feature-Updates/SafeGuardHolds
 #>
 
 <#
@@ -45,6 +43,7 @@ $SettingsTable = @(
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_05_28_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2372'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_17_03_02_AMD64.cab'; ALTERNATEDATAVERSION = '2375'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_06_26_06_02_AMD64.cab'; ALTERNATEDATAVERSION = '2376'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_07_09_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2377'} # From Robert Stein (@RaslDasl)
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_07_23_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2379'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_10_01_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2387'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2020_10_26_05_02_AMD64.cab'; ALTERNATEDATAVERSION = '2390'}
@@ -87,6 +86,8 @@ $SettingsTable = @(
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_27_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2547'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_11_03_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2548'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_11_10_04_01_AMD64.cab'; ALTERNATEDATAVERSION = '2549'}
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_11_10_04_01_X86.cab'  ; ALTERNATEDATAVERSION = '254986'} # From Robert Stein (@RaslDasl)
+@{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_11_22_03_01_AMD64.cab'; ALTERNATEDATAVERSION = '2550'} # From Tyler Cox (@_Tcox8)
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_10_27_03_02_AMD64.cab'; ALTERNATEDATAVERSION = '2614'}
 @{ ALTERNATEDATALINK = 'http://adl.windows.com/appraiseradl/2022_11_10_04_02_AMD64.cab'; ALTERNATEDATAVERSION = '2616'}
 
