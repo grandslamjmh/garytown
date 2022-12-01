@@ -45,11 +45,10 @@ Changes from the orginal script are
 
 #>
 
-$storageAccount = "garytownstorage"
-$PartitionKeyName = "GT"
-#$accesskey = Get-AutomationVariable -Name StorageAccountAccessKey
+
 $script:Destination = "$env:TEMP"
 $ProgressPreference = 'SilentlyContinue'
+$JSONOutputPath = "C:\GitHub\garytown\garytown\Azure\Automation\WinUpdates"
 
 #Run Items:
 $RunEditionsDatatable = $true
@@ -1154,7 +1153,7 @@ if ($RunM365VersionHistoryTable -eq $true){
         }
         #Write-Output "$i | $($Data.Version) | $($Data.ReleaseDate) | $($Data.Release) | $($Data.FullBuild) | $($Data.Channel) | $($Data.ChannelShortName) | $($Data.ChannelBuild)"
         #InsertReplaceTableEntity -TableName "M365VersionsHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $M365VersionsHistoryTableData | ConvertTo-Json | Out-File "C:\Drivers\M365VersionsHistoryTableData.json" -Force
+        $M365VersionsHistoryTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365VersionsHistoryTableData.json" -Force
     }
 }
 if ($RunM365SupportedVersionTable -eq $true){
@@ -1174,7 +1173,7 @@ if ($RunM365SupportedVersionTable -eq $true){
 
         }
         #InsertReplaceTableEntity -TableName "M365VersionSupportTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $M365SupportedVersionTableData | ConvertTo-Json | Out-File "C:\Drivers\M365SupportedVersionTableData.json" -Force
+        $M365SupportedVersionTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365SupportedVersionTableData.json" -Force
     }
 }
 if ($RunEditionsDatatable -eq $true){
@@ -1195,7 +1194,7 @@ if ($RunEditionsDatatable -eq $true){
             EditionFamily = $Data.EditionFamily
         }
         #InsertReplaceTableEntity -TableName "OSEditionsTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSEditionsTableData | ConvertTo-Json | Out-File "C:\Drivers\OSEditionsTableData.json" -Force
+        $OSEditionsTableData | ConvertTo-Json | Out-File "$JSONOutputPath\OSEditionsTableData.json" -Force
     }
 }
 if ($RunUpdateHistoryTable -eq $true){
@@ -1216,7 +1215,7 @@ if ($RunUpdateHistoryTable -eq $true){
             Type = $Data.Type
         }
         #InsertReplaceTableEntity -TableName "OSUpdateHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSUpdateHistoryTable | ConvertTo-Json | Out-File "C:\Drivers\OSUpdateHistoryTable.json" -Force
+        $OSUpdateHistoryTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSUpdateHistoryTable.json" -Force
 
     }
 }
@@ -1264,7 +1263,7 @@ if ($RunLatestUpdateTable -eq $true){
             LatestUpdateType = $Data.LatestUpdateType
         }
         #InsertReplaceTableEntity -TableName "OSLatestUpdateTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSLatestUpdateTable | ConvertTo-Json | Out-File "C:\Drivers\OSLatestUpdateTable.json" -Force
+        $OSLatestUpdateTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSLatestUpdateTable.json" -Force
     }
 }
 if ($RunMSDefenderDefsTable -eq $true){
@@ -1282,6 +1281,6 @@ if ($RunMSDefenderDefsTable -eq $true){
 
         }
         #InsertReplaceTableEntity -TableName "MSWinDefenderDefsInfo" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $MSDefenderDefsTableInfo | ConvertTo-Json | Out-File "C:\Drivers\MSWinDefenderDefsInfo.json" -Force
+        $MSDefenderDefsTableInfo | ConvertTo-Json | Out-File "$JSONOutputPath\MSWinDefenderDefsInfo.json" -Force
     }
 }
