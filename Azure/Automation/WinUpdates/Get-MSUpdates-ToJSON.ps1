@@ -1,6 +1,6 @@
 ############################################################################
-##  AZURE AUTOMATION RUNBOOK TO EXPORT WINDOWS UPDATE RELEASE INFORMATION ##
-##  FROM MS DOCS TO 3 Azure Storage Tables   
+##  Builds JSON Files with Update info ##
+##    
 ##
 ############################################################################
 
@@ -15,26 +15,8 @@ Modified Date: 2022.06.07
 
 Changes from the orginal script are
  - Removed section to create JSON and upload to Log analyics (near end)
- - Added Function  InsertReplaceTableEntity (based on https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity) | unsure who created orginally, I found it used in another script at work.
- - Added section that loops through the data and inserts into the Azure Storage Tables
  - 99% of the script is the orginal work of Trevor, I only made MINOR modifications for where the data goes.  If you find this, please look at Trevor's version, and thank him for this amazing script.
 
- You will need to create 3 storage tables in Azure:
-  - OSEditionsTable
-  - OSLatestUpdateTable
-  - OSUpdateHistoryTable
-
-  Also these (Late additions)
-  - MSWinDefenderDefsInfo
-  - M365VersionSupportTable
-  - M365VersionsHistoryTable
-
- You will need to update:
-  - StorageAccount
-  - PartitionName 
-  - AccessKey (you'll need to create this in Azure Automation, follow Trevor's guide for an example)
-
-  As the title says, you will need to run this from Azure Automation, or make additional edits to make it work from a Client.
 
   Modified Date 2022.08.08 - Added M365 Supported Version (M365VersionSupportTable, M365VersionsHistoryTable)
   
@@ -43,6 +25,7 @@ Changes from the orginal script are
 
   Modified Date 2022.08.23 - Modifed M365 History to use different URL, borrowed a function from: https://github.com/binSHA3/O356Versions/blob/main/Get-O365Data.ps1
 
+  Modified Date 2022.12.01 - Tons of Cleanup to just dump data to JSON, functions removed, and code cleaned up.
 #>
 
 
@@ -75,30 +58,7 @@ If ([System.Globalization.CultureInfo]::CurrentCulture.Name -ne "en-US")
 ## FUNCTIONS ##
 ###############
 #region Functions
-function InsertReplaceTableEntity($TableName, $PartitionKey, $RowKey, $entity) {
-    $version = "2017-04-17"
-    $resource = "$tableName(PartitionKey='$PartitionKey',RowKey='$Rowkey')"
-    $table_url = "https://$storageAccount.table.core.windows.net/$resource"
-    $GMTTime = (Get-Date).ToUniversalTime().toString('R')
-    $stringToSign = "$GMTTime`n/$storageAccount/$resource"
-    $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-    $hmacsha.key = [Convert]::FromBase64String($accesskey)
-    $signature = $hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes($stringToSign))
-    $signature = [Convert]::ToBase64String($signature)
-    $headers = @{
-        'x-ms-date'    = $GMTTime
-        Authorization  = "SharedKeyLite " + $storageAccount + ":" + $signature
-        "x-ms-version" = $version
-        Accept         = "application/json;odata=fullmetadata"
-    }
-    $body = $entity | ConvertTo-Json
-    Try {
-        Invoke-RestMethod -Method PUT -Uri $table_url -Headers $headers -Body $body -ContentType application/json;
-    } Catch {
-        Write-Host "Failed to send $TableName";
-        Write-Host $_;
-    }
-}
+
 
 function Format-VersionHistoryTable {
     [cmdletbinding()]
@@ -136,7 +96,7 @@ function Format-VersionHistoryTable {
                         Version = $tempAry[0].Replace('Version ', '').Trim()
                         ChannelBuild = $channelBuild
                         FullBuild = ([version] "16.0.$($channelBuild)")
-                        ReleaseDate = $releaseDate
+                        ReleaseDate = $releaseDate.ToString("MM/dd/yyyy HH:mm:ss")
                         Release = $release
                     })
                     $release++
@@ -160,43 +120,6 @@ Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $metho
     $encodedHash = [Convert]::ToBase64String($calculatedHash)
     $authorization = 'SharedKey {0}:{1}' -f $customerId,$encodedHash
     return $authorization
-}
-
-# Create the function to create and post the request
-# ref https://docs.microsoft.com/en-us/azure/azure-monitor/logs/data-collector-api
-Function Post-LogAnalyticsData($customerId, $sharedKey, $body, $logType)
-{
-    $method = "POST"
-    $contentType = "application/json"
-    $resource = "/api/logs"
-    $rfc1123date = [DateTime]::UtcNow.ToString("r")
-    $contentLength = $body.Length
-    $TimeStampField = ""
-    $signature = Build-Signature `
-        -customerId $customerId `
-        -sharedKey $sharedKey `
-        -date $rfc1123date `
-        -contentLength $contentLength `
-        -method $method `
-        -contentType $contentType `
-        -resource $resource
-    $uri = "https://" + $customerId + ".ods.opinsights.azure.com" + $resource + "?api-version=2016-04-01"
-
-    $headers = @{
-        "Authorization" = $signature;
-        "Log-Type" = $logType;
-        "x-ms-date" = $rfc1123date;
-        "time-generated-field" = $TimeStampField;
-    }
-
-    try {
-        $response = Invoke-WebRequest -Uri $uri -Method $method -ContentType $contentType -Headers $headers -Body $body -UseBasicParsing
-    }
-    catch {
-        $response = $_#.Exception.Response
-    }
-    
-    return $response
 }
 
 # Function to output a datatable containing the support status of W10/11 versions
@@ -441,6 +364,7 @@ Function New-UpdateHistoryTable {
                     $Type = "Preview" # Could be out-of-band - how to detect?
                 }
             }
+            
 
             foreach ($BuildNumber in $BuildNumbers)
             {
@@ -1017,7 +941,7 @@ Function New-MSDefenderDefsTable {
                     "Version","Engine Version","Platform Version","Released" | ForEach-Object {
                         if ($cells[$t] -match "dateofrelease"){
                             $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Replace("<li>Released: ","").Trim())
-                            $Row["$_"] = $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Split('Released:')[1].Trim())
+                            $Row["$_"] = $(($cells[$t].ToString().Replace('<span id="dateofrelease">',"")).Replace('</span></li>',"").Replace("<li>Released: ","").Trim())
                         }
                         else {
                             $(($cells[$t].ToString().Replace('<span>',"")).Replace('</span></li>',"").Split(':')[1].Trim())
@@ -1119,168 +1043,34 @@ $script:LatestUpdateTable = [System.Data.DataTable]::new()
 $script:VersionBuildTable = [System.Data.DataTable]::new()
 $script:M365SupportedVersionTable = [System.Data.DataTable]::new()
 $script:M365SupportedVersionTableHistory = [System.Data.DataTable]::new()
-#$script:M365VersionHistoryTable = [System.Data.DataTable]::new()
 $script:MSDefenderDefsTable = [System.Data.DataTable]::new()
 
 
 # Build the OS info tables
-if ($RunVersionBuildTable -eq $true){New-OSVersionBuildTable}
-if ($RunEditionsDatatable -eq $true){New-SupportTable}
-if ($RunUpdateHistoryTable -eq $true){New-UpdateHistoryTable}
-if ($RunLatestUpdateTable -eq $true){New-LatestUpdateTable}
-if ($RunM365SupportedVersionTable -eq $true){New-M365SupportedVersionsTable}
-if ($RunM365VersionHistoryTable -eq $true){New-M365SupportedVersionsTableHistory}
-#if ($RunM365VersionHistoryTable -eq $true){New-M365VersionsHistoryTable}
-if ($RunMSDefenderDefsTable -eq $true){New-MSDefenderDefsTable}
-
-# Post the tables off to Azure Storage Table
-
-if ($RunM365VersionHistoryTable -eq $true){
-    Write-Host "Starting M365VersionsHistoryTable"
-    $M365VersionsHistoryTableData = $FormattedVersionHistory # | Select $FormattedVersionHistory.Columns.ColumnName
-    $i = 0
-    Foreach ($Data in $M365VersionsHistoryTableData){
-        $i++
-        $body = @{
-            RowKey = $i
-            Version = $($Data.Version).ToString()
-            ReleaseDate = $($Data.ReleaseDate).ToString()
-            Release = $($Data.Release).ToString()
-            Build = $($Data.FullBuild).ToString()
-            Channel = $($Data.Channel).ToString()
-            ChannelShortName = $($Data.ChannelShortName).ToString()
-            ChannelBuild = $($Data.ChannelBuild).ToString()
-        }
-        #Write-Output "$i | $($Data.Version) | $($Data.ReleaseDate) | $($Data.Release) | $($Data.FullBuild) | $($Data.Channel) | $($Data.ChannelShortName) | $($Data.ChannelBuild)"
-        #InsertReplaceTableEntity -TableName "M365VersionsHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $M365VersionsHistoryTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365VersionsHistoryTableData.json" -Force
-    }
-}
-if ($RunM365SupportedVersionTable -eq $true){
-    Write-Host "Starting M365VersionSupportTable"
-    $M365SupportedVersionTableData = $M365SupportedVersionTable.Rows | Select $M365SupportedVersionTable.Columns.ColumnName
-    $i = 0
-    Foreach ($Data in $M365SupportedVersionTableData){
-        $i++
-        $body = @{
-            RowKey = $i
-            Channel = $Data.Channel
-            Version = $Data.Version
-            Build = $Data.Build
-            LatestReleaseDate  = $Data.'Latest release date'
-            VersionAvailabilityDate = $Data.'Version availability date'
-            EndOfService = $Data.'End of service'
-
-        }
-        #InsertReplaceTableEntity -TableName "M365VersionSupportTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $M365SupportedVersionTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365SupportedVersionTableData.json" -Force
-    }
+if ($RunVersionBuildTable -eq $true){
+    New-OSVersionBuildTable
 }
 if ($RunEditionsDatatable -eq $true){
-    Write-Host "Starting OSEditionsTable"
-    $OSEditionsTableData = $EditionsDatatable.Rows | Select $EditionsDatatable.Columns.ColumnName
-    $i = 0
-    Foreach ($Data in $OSEditionsTableData){
-        $i++
-        $body = @{
-            RowKey = $i
-            WindowsRelease = $Data."Windows Release"
-            Version = $Data.Version
-            StartDate = $Data.StartDate
-            EndDate = $Data.EndDate
-            SupportPeriodInDays = $Data.SupportPeriodInDays
-            InSupport = $Data.InSupport
-            SupportDaysRemaining = $Data.SupportDaysRemaining
-            EditionFamily = $Data.EditionFamily
-        }
-        #InsertReplaceTableEntity -TableName "OSEditionsTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSEditionsTableData | ConvertTo-Json | Out-File "$JSONOutputPath\OSEditionsTableData.json" -Force
-    }
+    New-SupportTable
+    $OSEditionsTableData | ConvertTo-Json  | Out-File "$JSONOutputPath\OSEditionsTableData.json" -Force
 }
 if ($RunUpdateHistoryTable -eq $true){
-    Write-Host "Starting OSUpdateHistoryTable"
-    $OSUpdateHistoryTable = $UpdateHistoryTable.Rows | Select $UpdateHistoryTable.Columns.ColumnName 
-    $i = 0
-    Foreach ($Data in $OSUpdateHistoryTable){
-        $i++
-        $body = @{
-            RowKey = $i
-            WindowsRelease = $Data."Windows Release"
-            ReleaseDate = $Data.ReleaseDate
-            KB = $Data.KB
-            OSBuild = $Data.OSBuild
-            OSBaseBuild = $Data.OSBaseBuild
-            OSRevisionNumber = $Data.OSRevisionNumber
-            OSVersion = $Data.OSVersion
-            Type = $Data.Type
-        }
-        #InsertReplaceTableEntity -TableName "OSUpdateHistoryTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSUpdateHistoryTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSUpdateHistoryTable.json" -Force
-
-    }
+    New-UpdateHistoryTable
+    $OSUpdateHistoryTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSUpdateHistoryTable.json" -Force
 }
 if ($RunLatestUpdateTable -eq $true){
-    Write-Host "Starting OSLatestUpdateTable"
-    $OSLatestUpdateTable = $LatestUpdateTable.Rows | Select $LatestUpdateTable.Columns.ColumnName
-    $i = 0
-    Foreach ($Data in $OSLatestUpdateTable){
-        $i++
-        $body = @{
-            RowKey = $i
-            WindowsRelease = $Data."Windows Release"
-            OSBaseBuild = $Data.OSBaseBuild
-            OSVersion = $Data.OSVersion
-            LatestUpdate = $Data.LatestUpdate
-            LatestUpdate_KB = $Data.LatestUpdate_KB
-            LatestUpdate_ReleaseDate = $Data.LatestUpdate_ReleaseDate
-            LatestRegularUpdate = $Data.LatestRegularUpdate
-            LatestRegularUpdate_KB = $Data.LatestRegularUpdate_KB
-            LatestRegularUpdate_ReleaseDate = $Data.LatestRegularUpdate_ReleaseDate
-            LatestPreviewUpdate = $Data.LatestPreviewUpdate
-            LatestPreviewUpdate_KB = $Data.LatestPreviewUpdate_KB
-            LatestPreviewUpdate_ReleaseDate = $Data.LatestPreviewUpdate_ReleaseDate
-            LatestOutofBandUpdate = $Data.LatestOutofBandUpdate
-            LatestOutofBandUpdate_KB = $Data.LatestOutofBandUpdate_KB
-            LatestOutofBandUpdate_ReleaseDate = $Data.LatestOutofBandUpdate_ReleaseDate
-            LatestRegularUpdateLess1 = $Data.LatestRegularUpdateLess1
-            LatestRegularUpdateLess1_KB = $Data.LatestRegularUpdateLess1_KB
-            LatestRegularUpdateLess1_ReleaseDate = $Data.LatestRegularUpdateLess1_ReleaseDate
-            LatestPreviewUpdateLess1 = $Data.LatestPreviewUpdateLess1
-            LatestPreviewUpdateLess1_KB = $Data.LatestPreviewUpdateLess1_KB
-            LatestPreviewUpdateLess1_ReleaseDate = $Data.LatestPreviewUpdateLess1_ReleaseDate
-            LatestOutofBandUpdateLess1 = $Data.LatestOutofBandUpdateLess1
-            LatestOutofBandUpdateLess1_KB = $Data.LatestOutofBandUpdateLess1_KB
-            LatestOutofBandUpdateLess1_ReleaseDate = $Data.LatestOutofBandUpdateLess1_ReleaseDate
-            LatestRegularUpdateLess2 = $Data.LatestRegularUpdateLess2
-            LatestRegularUpdateLess2_KB = $Data.LatestRegularUpdateLess2_KB
-            LatestRegularUpdateLess2_ReleaseDate = $Data.LatestRegularUpdateLess2_ReleaseDate
-            LatestPreviewUpdateLess2 = $Data.LatestPreviewUpdateLess2
-            LatestPreviewUpdateLess2_KB = $Data.LatestPreviewUpdateLess2_KB
-            LatestPreviewUpdateLess2_ReleaseDate = $Data.LatestPreviewUpdateLess2_ReleaseDate
-            LatestOutofBandUpdateLess2 = $Data.LatestOutofBandUpdateLess2
-            LatestOutofBandUpdateLess2_KB = $Data.LatestOutofBandUpdateLess2_KB
-            LatestOutofBandUpdateLess2_ReleaseDate = $Data.LatestOutofBandUpdateLess2_ReleaseDate
-            LatestUpdateType = $Data.LatestUpdateType
-        }
-        #InsertReplaceTableEntity -TableName "OSLatestUpdateTable" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $OSLatestUpdateTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSLatestUpdateTable.json" -Force
-    }
+    New-LatestUpdateTable
+    $OSLatestUpdateTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSLatestUpdateTable.json" -Force
+}
+if ($RunM365SupportedVersionTable -eq $true){
+    New-M365SupportedVersionsTable
+    $M365SupportedVersionTableData | ConvertTo-Json  | Out-File "$JSONOutputPath\M365SupportedVersionTableData.json" -Force
+}
+if ($RunM365VersionHistoryTable -eq $true){
+    New-M365SupportedVersionsTableHistory
+    $M365VersionsHistoryTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365VersionsHistoryTableData.json" -Force
 }
 if ($RunMSDefenderDefsTable -eq $true){
-    Write-Host "Starting MSDefenderDefsTableInfo"
-    $MSDefenderDefsTableInfo = $MSDefenderDefsTable.Rows | Select $MSDefenderDefsTable.Columns.ColumnName 
-    $i = 0
-    Foreach ($Data in $MSDefenderDefsTableInfo){
-        $i++
-        $body = @{
-            RowKey = $i
-            Version = $Data.Version
-            EngineVersion = $Data."Engine Version"
-            PlatformVersion = $Data."Platform Version"
-            Released = $Data.Released
-
-        }
-        #InsertReplaceTableEntity -TableName "MSWinDefenderDefsInfo" -RowKey $body.RowKey -PartitionKey $PartitionKeyName -entity $body
-        $MSDefenderDefsTableInfo | ConvertTo-Json | Out-File "$JSONOutputPath\MSWinDefenderDefsInfo.json" -Force
-    }
+    New-MSDefenderDefsTable
+    $MSDefenderDefsTableInfo | ConvertTo-Json | Out-File "$JSONOutputPath\MSWinDefenderDefsInfo.json" -Force
 }
