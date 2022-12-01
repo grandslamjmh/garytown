@@ -293,11 +293,7 @@ Function New-UpdateHistoryTable {
     If ($script:UpdateHistoryTable.Columns.Count -eq 0)
     {
         "Windows Release","ReleaseDate","KB","OSBuild","OSBaseBuild","OSRevisionNumber","OSVersion","Type" | foreach {
-            If ($_ -eq "ReleaseDate")
-            {
-                [void]$UpdateHistoryTable.Columns.Add($_,[DateTime])
-            }
-            ElseIf ($_ -eq "OSBaseBuild" -or $_ -eq "OSRevisionNumber")
+            If ($_ -eq "OSBaseBuild" -or $_ -eq "OSRevisionNumber")
             {
                 [void]$UpdateHistoryTable.Columns.Add($_,[int])
             }
@@ -345,6 +341,7 @@ Function New-UpdateHistoryTable {
         foreach ($item in $KBarray)
         {
             $Date = $item.Split('-').Trim()[0]
+            $Date = ([DateTime]$Date).ToString("MM/dd/yyyy")
             $KB = $item.Split('-').Trim()[1].Split()[0]
             If ($KB.Length -lt 8)
             {
@@ -1052,25 +1049,31 @@ if ($RunVersionBuildTable -eq $true){
 }
 if ($RunEditionsDatatable -eq $true){
     New-SupportTable
-    $OSEditionsTableData | ConvertTo-Json  | Out-File "$JSONOutputPath\OSEditionsTableData.json" -Force
+    $EditionsDatatableData = $EditionsDatatable.Rows | Select $EditionsDatatable.Columns.ColumnName
+    $EditionsDatatableData | ConvertTo-Json  | Out-File "$JSONOutputPath\OSEditionsTableData.json" -Force
 }
 if ($RunUpdateHistoryTable -eq $true){
     New-UpdateHistoryTable
-    $OSUpdateHistoryTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSUpdateHistoryTable.json" -Force
+    $UpdateHistoryTableData = $UpdateHistoryTable.Rows | Select $UpdateHistoryTable.Columns.ColumnName
+    $UpdateHistoryTableData | ConvertTo-Json | Out-File "$JSONOutputPath\OSUpdateHistoryTable.json" -Force
 }
 if ($RunLatestUpdateTable -eq $true){
     New-LatestUpdateTable
-    $OSLatestUpdateTable | ConvertTo-Json | Out-File "$JSONOutputPath\OSLatestUpdateTable.json" -Force
+    $LatestUpdateTableData = $LatestUpdateTable.Rows | Select $LatestUpdateTable.Columns.ColumnName
+    $LatestUpdateTableData | ConvertTo-Json | Out-File "$JSONOutputPath\OSLatestUpdateTable.json" -Force
 }
 if ($RunM365SupportedVersionTable -eq $true){
     New-M365SupportedVersionsTable
+    $M365SupportedVersionTableData = $M365SupportedVersionTable.Rows | Select $M365SupportedVersionTable.Columns.ColumnName
     $M365SupportedVersionTableData | ConvertTo-Json  | Out-File "$JSONOutputPath\M365SupportedVersionTableData.json" -Force
 }
 if ($RunM365VersionHistoryTable -eq $true){
     New-M365SupportedVersionsTableHistory
-    $M365VersionsHistoryTableData | ConvertTo-Json | Out-File "$JSONOutputPath\M365VersionsHistoryTableData.json" -Force
+    $M365SupportedVersionTableHistoryData = $M365SupportedVersionTableHistory.Rows | Select $M365SupportedVersionTableHistory.Columns.ColumnName
+    $M365SupportedVersionTableHistoryData | ConvertTo-Json | Out-File "$JSONOutputPath\M365VersionsHistoryTableData.json" -Force
 }
 if ($RunMSDefenderDefsTable -eq $true){
     New-MSDefenderDefsTable
-    $MSDefenderDefsTableInfo | ConvertTo-Json | Out-File "$JSONOutputPath\MSWinDefenderDefsInfo.json" -Force
+    $MSDefenderDefsTableData = $MSDefenderDefsTable.Rows | Select $MSDefenderDefsTable.Columns.ColumnName
+    $MSDefenderDefsTableData | ConvertTo-Json | Out-File "$JSONOutputPath\MSWinDefenderDefsInfo.json" -Force
 }
