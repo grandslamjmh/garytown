@@ -31,6 +31,10 @@ I'm using the build Number as my Directory Structure (22621)
     example: Root\SureRecover\22621\Split
 
 
+Have your Web Server ready
+Update the $URL below to where you move your $Split folder contents to, along with the manifest file and manifest signature
+
+
 Once you've created your payload files, you can deploy them to your test machine
 Set-HPSecurePlatformPayload -PayloadFile "$SureRecoverWorkingpath\SPEKPP.dat"
 Set-HPSecurePlatformPayload -PayloadFile "$SureRecoverWorkingpath\SPSKPP.dat"
@@ -42,6 +46,7 @@ NOTE:  I tried to build these on a VM, but it didn't go well, I had to build the
 
 
 $Build = '22621' # Windows 11 22H2
+$URL = "http://hpsr.lab.garytown.com/$($build)/custom.mft"
 $SureRecoverWorkingpath = 'C:\Temp\SureRecover'
 $ImagePath = "$SureRecoverWorkingpath\$Build"
 $SplitPath = "$ImagePath\Split"
@@ -110,7 +115,6 @@ Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg8 -PassThru -NoNewWin
 
 $EndorsementKeyFile = "$SureRecoverWorkingpath\kek.pfx"
 $SigningKeyFile = "$SureRecoverWorkingpath\sk.pfx"
-$URL = "http://hpsr.lab.garytown.com/$($build)/custom.mft"
 $PublicKeyFile = "$SureRecoverWorkingpath\my-recovery-public.pem"
 
 #Create the HP Secure Platform Payload Files
