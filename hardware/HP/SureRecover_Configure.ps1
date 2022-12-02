@@ -46,10 +46,14 @@ NOTE:  I tried to build these on a VM, but it didn't go well, I had to build the
 
 
 $Build = '22621' # Windows 11 22H2
+
 $URL = "http://hpsr.lab.garytown.com/$($build)/custom.mft"
-$SureRecoverWorkingpath = 'C:\Temp\SureRecover'
+$AgentURL = "http://hpsr.lab.garytown.com/Agent"
+$SureRecoverWorkingpath = '\\nas\public\HP_Stuff\HPSR\HPSRStaging'
 $ImagePath = "$SureRecoverWorkingpath\$Build"
-$SplitPath = "$ImagePath\Split"
+$SplitPath = "$($ImagePath)Split"
+$AgentPath = "$SureRecoverWorkingpath\Agent"
+
 if (!(Test-Path -path $SureRecoverWorkingpath)){ new-item -Path $SureRecoverWorkingpath -ItemType Directory -Force | Out-Null}
 if (!(Test-Path -path $ImagePath)){ new-item -Path $ImagePath -ItemType Directory -Force | Out-Null}
 if (!(Test-Path -path $SplitPath)){ new-item -Path $SplitPath -ItemType Directory -Force | Out-Null}
@@ -73,51 +77,100 @@ Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg4 -PassThru -NoNewWin
 #Create the Custom Image
 
 #Split the WIM File (per docs recommendations)
-dism /Split-Image /ImageFile:$($ImagePath)\install.wim /SwmFile:$($SplitPath)\22621.swm /FileSize:64
+#dism /Split-Image /ImageFile:$($ImagePath)\install.wim /SwmFile:$($SplitPath)\22621.swm /FileSize:64
 
-#Build Manifest File: (Page 6 of Manual)
-$mftFilename = "custom.mft"
-$imageVersion = 2262101
+#Building Agent Manifest File:
+$mftFilename = "Custom.mft"
+$imageVersion = '22.12.02'
 $header = "mft_version=1, image_version=$imageVersion"
 Out-File -Encoding UTF8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $header
-$swmFiles = Get-ChildItem -Path $SureRecoverWorkingpath -Filter "*.swm"
+$Files = Get-ChildItem -Path $ImagePath -Recurse | Where-Object {$_.Attributes -ne 'Directory'}
 $ToNatural = { [regex]::Replace($_, '\d*\....$',{ $args[0].Value.PadLeft(50) }) }
-$pathToManifest = (Resolve-Path ".").Path
-$total = $swmFiles.count
+$pathToManifest = $ImagePath
+$total = $Files.count
 $current = 1
-$swmFiles | Sort-Object $ToNatural | ForEach-Object {
+$Files | Sort-Object $ToNatural | ForEach-Object {
      Write-Progress -Activity "Generating manifest" -Status "$current of $total ($_)" -PercentComplete ($current / $total * 100)
      $hashObject = Get-FileHash -Algorithm SHA256 -Path $_.FullName
      $fileHash = $hashObject.Hash.ToLower()
      $filePath = $hashObject.Path.Replace($pathToManifest + '\', '')
      $fileSize = (Get-Item $_.FullName).length
      $manifestContent = "$fileHash $filePath $fileSize"
-     Out-File -Encoding utf8 -FilePath $mftFilename -InputObject $manifestContent -Append
+     Out-File -Encoding utf8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $manifestContent -Append
      $current = $current + 1
 }
-$content = Get-Content $mftFilename
+$content = Get-Content $SureRecoverWorkingpath\$mftFilename
 $encoding = New-Object System.Text.UTF8Encoding $False
 [System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
 $content, $encoding)
 
 
+
+#Building Agent Manifest File:  # DON'T DO THIS.... DOESN't WORK... Was just messing around for fun
+<#
+$mftFilename = "recovery.mft"
+$imageVersion = '22.12.02'
+$header = "mft_version=1, image_version=$imageVersion"
+Out-File -Encoding UTF8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $header
+$Files = Get-ChildItem -Path $AgentPath -Recurse | Where-Object {$_.Attributes -ne 'Directory'}
+$ToNatural = { [regex]::Replace($_, '\d*\....$',{ $args[0].Value.PadLeft(50) }) }
+$pathToManifest = $SureRecoverWorkingpath
+$total = $Files.count
+$current = 1
+$Files | Sort-Object $ToNatural | ForEach-Object {
+     Write-Progress -Activity "Generating manifest" -Status "$current of $total ($_)" -PercentComplete ($current / $total * 100)
+     $hashObject = Get-FileHash -Algorithm SHA256 -Path $_.FullName
+     $fileHash = $hashObject.Hash.ToLower()
+     $filePath = $hashObject.Path.Replace($pathToManifest + '\', '')
+     $fileSize = (Get-Item $_.FullName).length
+     $manifestContent = "$fileHash $filePath $fileSize"
+     Out-File -Encoding utf8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $manifestContent -Append
+     $current = $current + 1
+}
+$content = Get-Content $SureRecoverWorkingpath\$mftFilename
+$encoding = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
+$content, $encoding)
+#>
+
+
 #Generating manifest Signature
 
-$arg5 = 'genrsa -out my-recovery-private.pem 2048'
-$arg6 = 'rsa -in my-recovery-private.pem -pubout -out my-recoverypublic.pem'
+#Generate Private & Public PEM Files
+if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
+    $arg5 = 'genrsa -out my-recovery-private.pem 2048'
+    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg5 -PassThru -NoNewWindow -Wait
+}
+if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
+    $arg6 = 'rsa -in my-recovery-private.pem -pubout -out my-recoverypublic.pem'
+    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg6 -PassThru -NoNewWindow -Wait
+}
+
+#Sign Image Manfiest Files
 $arg7 = 'dgst -sha256 -sign my-recovery-private.pem -out custom.sig custom.mft'
 $arg8 = 'dgst -sha256 -verify my-recovery-public.pem -signature custom.sig custom.mft'
-
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg5 -PassThru -NoNewWindow -Wait
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg6 -PassThru -NoNewWindow -Wait
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg7 -PassThru -NoNewWindow -Wait
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg8 -PassThru -NoNewWindow -Wait
+
+#Sign Agent Manifest Files
+$arg9 = 'dgst -sha256 -sign my-recovery-private.pem -out recovery.sig recovery.mft'
+$arg10 = 'dgst -sha256 -verify my-recovery-public.pem -signature recovery.sig recovery.mft'
+Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg9 -PassThru -NoNewWindow -Wait
+Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg10 -PassThru -NoNewWindow -Wait
+
 
 $EndorsementKeyFile = "$SureRecoverWorkingpath\kek.pfx"
 $SigningKeyFile = "$SureRecoverWorkingpath\sk.pfx"
 $PublicKeyFile = "$SureRecoverWorkingpath\my-recovery-public.pem"
+#$AgentPublicKeyFile  = $PublicKeyFile
+$AgentPublicKeyFile  = "$SureRecoverWorkingpath\hpsr_agent_public_key.pem" #Default Signing Key for Default Agent
 
 #Create the HP Secure Platform Payload Files
 New-HPSecurePlatformEndorsementKeyProvisioningPayload -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SPEKPP.dat"
 New-HPSecurePlatformSigningKeyProvisioningPayload -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd  -OutputFile "$SureRecoverWorkingpath\SPSKPP.dat"
 New-HPSureRecoverImageConfigurationPayload -Image OS -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $PublicKeyFile -Url $URL -OutputFile "$SureRecoverWorkingpath\OSpayload.dat"
+New-HPSureRecoverImageConfigurationPayload -Image Agent -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $AgentPublicKeyFile  -Url $AgentURL -OutputFile "$SureRecoverWorkingpath\Agentpayload.dat"
+
+#Create Deprovisioning Payloads
+New-HPSureRecoverDeprovisionPayload -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SureRecoverDeprovision.dat"
+New-HPSecurePlatformDeprovisioningPayload -Verbose -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SecurePlatformDeprovision.dat"
