@@ -45,20 +45,28 @@ NOTE:  I tried to build these on a VM, but it didn't go well, I had to build the
 
 
 
-$Build = '22621' # Windows 11 22H2
+$Build = '19045' # Windows 11 22H2
+$HPProdCode = '83B2'
 
-$URL = "http://hpsr.lab.garytown.com/$($build)/custom.mft"
+#$URL = "http://hpsr.lab.garytown.com/$($build)/custom.mft"
+$URL = "http://hpsr.lab.garytown.com/$($HPProdCode)/$($build)/custom.mft"
 $AgentURL = "http://hpsr.lab.garytown.com/Agent"
+$ProdWebServerRootPath = "\\cm.lab.garytown.com\e$\HPSR"
+$ProdWebServerImagePath = "$ProdWebServerRootPath\$HPProdCode\$Build"
 $SureRecoverWorkingpath = '\\nas\public\HP_Stuff\HPSR\HPSRStaging'
-$ImagePath = "$SureRecoverWorkingpath\$Build"
+$ImagePath = "$SureRecoverWorkingpath\$HPProdCode\$Build"
+$DatFilePath = "$SureRecoverWorkingpath\$HPProdCode\$($Build)_DAT"
 $SplitPath = "$($ImagePath)Split"
 $AgentPath = "$SureRecoverWorkingpath\Agent"
 
 if (!(Test-Path -path $SureRecoverWorkingpath)){ new-item -Path $SureRecoverWorkingpath -ItemType Directory -Force | Out-Null}
 if (!(Test-Path -path $ImagePath)){ new-item -Path $ImagePath -ItemType Directory -Force | Out-Null}
-if (!(Test-Path -path $SplitPath)){ new-item -Path $SplitPath -ItemType Directory -Force | Out-Null}
+#if (!(Test-Path -path $SplitPath)){ new-item -Path $SplitPath -ItemType Directory -Force | Out-Null}
+if (!(Test-Path -path $DatFilePath)){ new-item -Path $DatFilePath -ItemType Directory -Force | Out-Null}
 Set-Location -Path $SureRecoverWorkingpath
 
+#Generate Private & Public PEM Files - Do this Once and don't do it again... just don't lose those files
+<#
 #Path to OpenSSL Light Installation
 $OpenSLLFilePath = 'C:\Program Files\OpenSSL-Win64\bin\openssl.exe'
 
@@ -73,6 +81,18 @@ Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg2 -PassThru -NoNewWin
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg3 -PassThru -NoNewWindow -Wait
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg4 -PassThru -NoNewWindow -Wait
 
+if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
+    $arg5 = "genrsa -out $SureRecoverWorkingpath\my-recovery-private.pem 2048"
+    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg5 -PassThru -NoNewWindow -Wait
+}
+if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
+    $arg6 = "rsa -in $SureRecoverWorkingpath\my-recovery-private.pem -pubout -out $SureRecoverWorkingpath\my-recoverypublic.pem"
+    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg6 -PassThru -NoNewWindow -Wait
+}
+#>
+
+
+
 
 #Create the Custom Image
 
@@ -81,6 +101,7 @@ Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg4 -PassThru -NoNewWin
 
 #Building Agent Manifest File:
 $mftFilename = "Custom.mft"
+$sigFileName = "Custom.sig"
 $imageVersion = '22.12.02'
 $header = "mft_version=1, image_version=$imageVersion"
 Out-File -Encoding UTF8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $header
@@ -103,7 +124,18 @@ $content = Get-Content $SureRecoverWorkingpath\$mftFilename
 $encoding = New-Object System.Text.UTF8Encoding $False
 [System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
 $content, $encoding)
+Remove-Item -Path "$ImagePath\$mftFilename" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$ImagePath\$sigFilename" -Force -ErrorAction SilentlyContinue
+Move-Item  "$SureRecoverWorkingpath\$mftFilename" -Destination "$ImagePath\$mftFilename"
 
+#Sign Image Manfiest Files
+$arg7 = "dgst -sha256 -sign $SureRecoverWorkingpath\my-recovery-private.pem -out $ImagePath\$sigFileName $ImagePath\$mftFilename"
+$arg8 = "dgst -sha256 -verify $SureRecoverWorkingpath\my-recovery-public.pem -signature $ImagePath\$sigFileName $ImagePath\$mftFilename"
+Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg7 -PassThru -NoNewWindow -Wait
+Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg8 -PassThru -NoNewWindow -Wait
+
+#Copy to Production WebServer Folder:
+copy-item $ImagePath\* -Destination $ProdWebServerImagePath -Force -Verbose
 
 
 #Building Agent Manifest File:  # DON'T DO THIS.... DOESN't WORK... Was just messing around for fun
@@ -131,32 +163,21 @@ $content = Get-Content $SureRecoverWorkingpath\$mftFilename
 $encoding = New-Object System.Text.UTF8Encoding $False
 [System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
 $content, $encoding)
-#>
 
+#Sign Agent Manifest Files - You don't need to do this.. was just testing an idea... didn't work
 
-#Generating manifest Signature
-
-#Generate Private & Public PEM Files
-if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
-    $arg5 = 'genrsa -out my-recovery-private.pem 2048'
-    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg5 -PassThru -NoNewWindow -Wait
-}
-if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
-    $arg6 = 'rsa -in my-recovery-private.pem -pubout -out my-recoverypublic.pem'
-    Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg6 -PassThru -NoNewWindow -Wait
-}
-
-#Sign Image Manfiest Files
-$arg7 = 'dgst -sha256 -sign my-recovery-private.pem -out custom.sig custom.mft'
-$arg8 = 'dgst -sha256 -verify my-recovery-public.pem -signature custom.sig custom.mft'
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg7 -PassThru -NoNewWindow -Wait
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg8 -PassThru -NoNewWindow -Wait
-
-#Sign Agent Manifest Files
 $arg9 = 'dgst -sha256 -sign my-recovery-private.pem -out recovery.sig recovery.mft'
 $arg10 = 'dgst -sha256 -verify my-recovery-public.pem -signature recovery.sig recovery.mft'
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg9 -PassThru -NoNewWindow -Wait
 Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg10 -PassThru -NoNewWindow -Wait
+
+
+#>
+
+
+
+
+
 
 
 $EndorsementKeyFile = "$SureRecoverWorkingpath\kek.pfx"
@@ -165,12 +186,16 @@ $PublicKeyFile = "$SureRecoverWorkingpath\my-recovery-public.pem"
 #$AgentPublicKeyFile  = $PublicKeyFile
 $AgentPublicKeyFile  = "$SureRecoverWorkingpath\hpsr_agent_public_key.pem" #Default Signing Key for Default Agent
 
-#Create the HP Secure Platform Payload Files
+#Create the HP Secure Platform Payload Files - Provisining Secure Platform
 New-HPSecurePlatformEndorsementKeyProvisioningPayload -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SPEKPP.dat"
 New-HPSecurePlatformSigningKeyProvisioningPayload -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd  -OutputFile "$SureRecoverWorkingpath\SPSKPP.dat"
-New-HPSureRecoverImageConfigurationPayload -Image OS -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $PublicKeyFile -Url $URL -OutputFile "$SureRecoverWorkingpath\OSpayload.dat"
+
+#Build the OSPayload file for Sure Recover Custom OS URL
+New-HPSureRecoverImageConfigurationPayload -Image OS -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $PublicKeyFile -Url $URL -OutputFile "$DatFilePath\OSpayload.dat"
+
+#AgentFile - Only needed if hosting your own Agent (which is optional)
 New-HPSureRecoverImageConfigurationPayload -Image Agent -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $AgentPublicKeyFile  -Url $AgentURL -OutputFile "$SureRecoverWorkingpath\Agentpayload.dat"
 
-#Create Deprovisioning Payloads
+#Create Deprovisioning Payloads - For when you want to change your Sure Recover Settings, you need to deprovision first (or at least I've had to in my test machine)
 New-HPSureRecoverDeprovisionPayload -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SureRecoverDeprovision.dat"
 New-HPSecurePlatformDeprovisioningPayload -Verbose -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SecurePlatformDeprovision.dat"
