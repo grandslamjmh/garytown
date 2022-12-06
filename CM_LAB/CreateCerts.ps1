@@ -3,6 +3,8 @@
 #Only have the code for Client Cert so far, and still need to code the permissions... so this is still mostly manual
 
 
+#Had issues with this cert, ended up creating a new one and deploying..
+
 
 #ConfigMgr Client Auth Cert Creation
 $ConfigContext = ([ADSI]"LDAP://RootDSE").ConfigurationNamingContext 
