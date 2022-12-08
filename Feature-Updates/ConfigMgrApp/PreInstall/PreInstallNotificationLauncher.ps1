@@ -2,10 +2,9 @@
 .SYNOPSIS
     --.
 .DESCRIPTION
-    SuccessSetupDiag.ps1, triggered by Success.cmd
-    Application Checking PreFlight script to confirm some applications are at specific levels, or the script will fail the upgrade out early, making reporting easier.
+Create a Process as Logged-On-User from PowerShell
+Then Launch the PreInstall Notificaiton Script as the logged on user.
 
-    Update the $AppChecks variable to check for additional apps. Add as many versions as you want to "Approve" to be allowed
 .INPUTS
     None.
 .OUTPUTS
@@ -403,11 +402,16 @@ CMTraceLog -Message  "Starting $ScriptName" -Type 1 -LogFile $LogFile
 CMTraceLog -Message  "Running as: $whoami" -Type 1 -LogFile $LogFile
 
 
-#$EXE = "cmd.exe"#$ARG = '/c start /MIN powershell.exe -ExecutionPolicy ByPass -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'#[murrayju.ProcessExtensions.ProcessExtensions]::StartProcessAsCurrentUser($EXE, $ARG)
-$EXE = "c:\windows\system32\cmd.exe"$ARG = '/c start /MIN c:\windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -windowstyle hidden -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'
+#$EXE = "cmd.exe"
+#$ARG = '/c start /MIN powershell.exe -ExecutionPolicy ByPass -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'
+#[murrayju.ProcessExtensions.ProcessExtensions]::StartProcessAsCurrentUser($EXE, $ARG)
+
+$EXE = "c:\windows\system32\cmd.exe"
+$ARG = '/c start /MIN c:\windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -windowstyle hidden -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'
 [murrayju.ProcessExtensions.ProcessExtensions]::StartProcessAsCurrentUser($EXE, $ARG)
 
-#$EXE = "powershell.exe"#$ARG = ' -ExecutionPolicy ByPass -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'
+#$EXE = "powershell.exe"
+#$ARG = ' -ExecutionPolicy ByPass -File C:\ProgramData\WaaS\PreInstall\PreInstallNotification.ps1'
 #[murrayju.ProcessExtensions.ProcessExtensions]::StartProcessAsCurrentUser($EXE, $ARG)
 
 
