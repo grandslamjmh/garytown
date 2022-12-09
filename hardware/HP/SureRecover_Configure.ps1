@@ -163,3 +163,13 @@ New-HPSureRecoverImageConfigurationPayload -Image Agent -SigningKeyFile $Signing
 #Create Deprovisioning Payloads - For when you want to change your Sure Recover Settings, you need to deprovision first (or at least I've had to in my test machine)
 New-HPSureRecoverDeprovisionPayload -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SureRecoverDeprovision.dat"
 New-HPSecurePlatformDeprovisioningPayload -Verbose -EndorsementKeyFile $EndorsementKeyFile -EndorsementKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SecurePlatformDeprovision.dat"
+
+
+
+#On the EndPoint:
+$StagingPath = $PSScriptRoot
+
+Set-HPSecurePlatformPayload -PayloadFile "$StagingPath\SPEKPP.dat"
+Set-HPSecurePlatformPayload -PayloadFile "$StagingPath\SPSKPP.dat"
+Set-HPSecurePlatformPayload -PayloadFile "$StagingPath\OSpayload.dat"
+Set-HPSecurePlatformPayload -PayloadFile "$StagingPath\Agentpayload.dat"
