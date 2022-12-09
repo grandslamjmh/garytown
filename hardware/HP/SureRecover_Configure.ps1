@@ -58,6 +58,8 @@ $ImagePath = "$SureRecoverWorkingpath\$HPProdCode\$Build"
 $DatFilePath = "$SureRecoverWorkingpath\$HPProdCode\$($Build)_DAT"
 $SplitPath = "$($ImagePath)Split"
 $AgentPath = "$SureRecoverWorkingpath\Agent"
+$OpenSLLFilePath = 'C:\Program Files\OpenSSL-Win64\bin\openssl.exe'
+
 
 if (!(Test-Path -path $SureRecoverWorkingpath)){ new-item -Path $SureRecoverWorkingpath -ItemType Directory -Force | Out-Null}
 if (!(Test-Path -path $ImagePath)){ new-item -Path $ImagePath -ItemType Directory -Force | Out-Null}
@@ -68,7 +70,6 @@ Set-Location -Path $SureRecoverWorkingpath
 #Generate Private & Public PEM Files - Do this Once and don't do it again... just don't lose those files
 <#
 #Path to OpenSSL Light Installation
-$OpenSLLFilePath = 'C:\Program Files\OpenSSL-Win64\bin\openssl.exe'
 
 #Create the Endoresement & Signing Certs (Creates them in the path this is running, which should be your Working Path)
 $arg1 = 'req -x509 -nodes -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -subj "/C=US/ST=MN/L=Glenwood/O=GARYTOWN/OU=IT/CN=lab.garytown.com"'
@@ -99,9 +100,13 @@ if (!(Test-Path -Path "$SureRecoverWorkingpath\my-recoverypublic.pem")){
 #Split the WIM File (per docs recommendations)
 #dism /Split-Image /ImageFile:$($ImagePath)\install.wim /SwmFile:$($SplitPath)\22621.swm /FileSize:64
 
+
+
 #Building Agent Manifest File:
 $mftFilename = "Custom.mft"
 $sigFileName = "Custom.sig"
+Remove-Item -Path "$ImagePath\$mftFilename" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$ImagePath\$sigFilename" -Force -ErrorAction SilentlyContinue
 $imageVersion = '22.12.02'
 $header = "mft_version=1, image_version=$imageVersion"
 Out-File -Encoding UTF8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $header
@@ -124,9 +129,8 @@ $content = Get-Content $SureRecoverWorkingpath\$mftFilename
 $encoding = New-Object System.Text.UTF8Encoding $False
 [System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
 $content, $encoding)
-Remove-Item -Path "$ImagePath\$mftFilename" -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "$ImagePath\$sigFilename" -Force -ErrorAction SilentlyContinue
-Move-Item  "$SureRecoverWorkingpath\$mftFilename" -Destination "$ImagePath\$mftFilename"
+
+Move-Item  "$SureRecoverWorkingpath\$mftFilename" -Destination "$ImagePath\$mftFilename" -ErrorAction SilentlyContinue
 
 #Sign Image Manfiest Files
 $arg7 = "dgst -sha256 -sign $SureRecoverWorkingpath\my-recovery-private.pem -out $ImagePath\$sigFileName $ImagePath\$mftFilename"
@@ -136,46 +140,6 @@ Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg8 -PassThru -NoNewWin
 
 #Copy to Production WebServer Folder:
 copy-item $ImagePath\* -Destination $ProdWebServerImagePath -Force -Verbose
-
-
-#Building Agent Manifest File:  # DON'T DO THIS.... DOESN't WORK... Was just messing around for fun
-<#
-$mftFilename = "recovery.mft"
-$imageVersion = '22.12.02'
-$header = "mft_version=1, image_version=$imageVersion"
-Out-File -Encoding UTF8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $header
-$Files = Get-ChildItem -Path $AgentPath -Recurse | Where-Object {$_.Attributes -ne 'Directory'}
-$ToNatural = { [regex]::Replace($_, '\d*\....$',{ $args[0].Value.PadLeft(50) }) }
-$pathToManifest = $SureRecoverWorkingpath
-$total = $Files.count
-$current = 1
-$Files | Sort-Object $ToNatural | ForEach-Object {
-     Write-Progress -Activity "Generating manifest" -Status "$current of $total ($_)" -PercentComplete ($current / $total * 100)
-     $hashObject = Get-FileHash -Algorithm SHA256 -Path $_.FullName
-     $fileHash = $hashObject.Hash.ToLower()
-     $filePath = $hashObject.Path.Replace($pathToManifest + '\', '')
-     $fileSize = (Get-Item $_.FullName).length
-     $manifestContent = "$fileHash $filePath $fileSize"
-     Out-File -Encoding utf8 -FilePath $SureRecoverWorkingpath\$mftFilename -InputObject $manifestContent -Append
-     $current = $current + 1
-}
-$content = Get-Content $SureRecoverWorkingpath\$mftFilename
-$encoding = New-Object System.Text.UTF8Encoding $False
-[System.IO.File]::WriteAllLines($pathToManifest + '\' + $mftFilename, 
-$content, $encoding)
-
-#Sign Agent Manifest Files - You don't need to do this.. was just testing an idea... didn't work
-
-$arg9 = 'dgst -sha256 -sign my-recovery-private.pem -out recovery.sig recovery.mft'
-$arg10 = 'dgst -sha256 -verify my-recovery-public.pem -signature recovery.sig recovery.mft'
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg9 -PassThru -NoNewWindow -Wait
-Start-Process -FilePath $OpenSLLFilePath -ArgumentList $arg10 -PassThru -NoNewWindow -Wait
-
-
-#>
-
-
-
 
 
 
@@ -194,7 +158,7 @@ New-HPSecurePlatformSigningKeyProvisioningPayload -EndorsementKeyFile $Endorseme
 New-HPSureRecoverImageConfigurationPayload -Image OS -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $PublicKeyFile -Url $URL -OutputFile "$DatFilePath\OSpayload.dat"
 
 #AgentFile - Only needed if hosting your own Agent (which is optional)
-New-HPSureRecoverImageConfigurationPayload -Image Agent -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $AgentPublicKeyFile  -Url $AgentURL -OutputFile "$SureRecoverWorkingpath\Agentpayload.dat"
+New-HPSureRecoverImageConfigurationPayload -Image Agent -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -PublicKeyFile $AgentPublicKeyFile  -Url $AgentURL -OutputFile "$SureRecoverWorkingpath\Agentpayload.dat" -Verbose
 
 #Create Deprovisioning Payloads - For when you want to change your Sure Recover Settings, you need to deprovision first (or at least I've had to in my test machine)
 New-HPSureRecoverDeprovisionPayload -SigningKeyFile $SigningKeyFile -SigningKeyPassword P@ssw0rd -OutputFile "$SureRecoverWorkingpath\SureRecoverDeprovision.dat"
