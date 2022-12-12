@@ -125,10 +125,6 @@ $tsenv.value('OSDTargetSystemPartition') = "0-3" #Assume Disk 0, 3rd Partition, 
 					<Description>disable user account page</Description>
 					<Path>reg add HKLM\Software\Microsoft\Windows\CurrentVersion\Setup\OOBE /v UnattendCreatedUser /t REG_DWORD /d 1 /f</Path>
 				</RunSynchronousCommand>
-				<RunSynchronousCommand><Order>2</Order>
-					<Description>OSDCloud Specialize</Description>
-					<Path>PowerShell.exe -ExecutionPolicy Bypass -Command Invoke-OSDSpecialize</Path>
-				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
 	</settings></unattend>
